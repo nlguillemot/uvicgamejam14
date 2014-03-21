@@ -1,4 +1,4 @@
-sdl2-gl-template
+uvicgamejam14
 =============
 
-a template project for SDL2 and GL, using cmake
+uvic game jam 2014 game

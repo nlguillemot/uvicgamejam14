@@ -43,11 +43,11 @@ void run()
     GLplus::Program shaderProgram;
     {
         // compile shaders
-        GLplus::Shader vertexShader(GL_VERTEX_SHADER);
-        vertexShader.Compile(VertexShaderSource);
+        std::shared_ptr<GLplus::Shader> vertexShader = std::make_shared<GLplus::Shader>(GL_VERTEX_SHADER);
+        vertexShader->Compile(VertexShaderSource);
 
-        GLplus::Shader fragmentShader(GL_FRAGMENT_SHADER);
-        fragmentShader.Compile(FragmentShaderSource);
+        std::shared_ptr<GLplus::Shader> fragmentShader = std::make_shared<GLplus::Shader>(GL_FRAGMENT_SHADER);
+        fragmentShader->Compile(FragmentShaderSource);
 
         // attach & link
         shaderProgram.Attach(vertexShader);
@@ -56,8 +56,8 @@ void run()
     }
 
     // create a vertex buffer object to store the vertices
-    GLplus::VertexBuffer positionVertexData(GL_ARRAY_BUFFER);
-    positionVertexData.Upload(sizeof(TriangleData), TriangleData, GL_STATIC_DRAW);
+    std::shared_ptr<GLplus::Buffer> positionVertexData = std::make_shared<GLplus::Buffer>(GL_ARRAY_BUFFER);
+    positionVertexData->Upload(sizeof(TriangleData), TriangleData, GL_STATIC_DRAW);
 
     // create a VAO to hold the model
     GLplus::VertexArray model;

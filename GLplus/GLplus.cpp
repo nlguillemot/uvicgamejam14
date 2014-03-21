@@ -40,10 +40,11 @@ void Shader::ShaderDeleter::operator ()(GLuint* handle) const
     CheckGLErrors();
 }
 
-Shader::Shader(GLenum shadertype)
+Shader::Shader(GLenum shaderType)
     : mHandlePtr(&mHandle)
+    , mShaderType(shaderType)
 {
-    mHandle = glCreateShader(shadertype);
+    mHandle = glCreateShader(shaderType);
     CheckGLErrors();
 
     if (!mHandle)
@@ -78,12 +79,17 @@ void Shader::Compile(const GLchar* source)
     }
 }
 
+GLenum Shader::GetShaderType() const
+{
+    return mShaderType;
+}
+
 GLuint Shader::GetGLHandle() const
 {
     return mHandle;
 }
 
-void Program::ProgramDeleter::operator ()(GLuint* handle) const
+void Program::ProgramDeleter::operator()(GLuint* handle) const
 {
     glDeleteProgram(*handle);
     CheckGLErrors();
@@ -101,10 +107,22 @@ Program::Program()
     }
 }
 
-void Program::Attach(Shader& shader)
+void Program::Attach(const std::shared_ptr<Shader>& shader)
 {
-    glAttachShader(mHandle, shader.GetGLHandle());
+    glAttachShader(mHandle, shader->GetGLHandle());
     CheckGLErrors();
+
+    switch (shader->GetShaderType())
+    {
+    case GL_FRAGMENT_SHADER:
+        mFragmentShader = shader;
+        break;
+    case GL_VERTEX_SHADER:
+        mVertexShader = shader;
+        break;
+    default:
+        throw std::runtime_error("Unknown shader type.");
+    }
 }
 
 void Program::Link()
@@ -154,13 +172,13 @@ ScopedProgramBind::~ScopedProgramBind()
     CheckGLErrors();
 }
 
-void VertexBuffer::VertexBufferDeleter::operator()(GLuint* handle) const
+void Buffer::BufferDeleter::operator()(GLuint* handle) const
 {
     glDeleteBuffers(1, handle);
     CheckGLErrors();
 }
 
-VertexBuffer::VertexBuffer(GLenum target)
+Buffer::Buffer(GLenum target)
     : mHandlePtr(&mHandle)
     , mTarget(target)
 {
@@ -173,7 +191,7 @@ VertexBuffer::VertexBuffer(GLenum target)
     }
 }
 
-void VertexBuffer::Upload(GLsizeiptr size, const GLvoid* data, GLenum usage)
+void Buffer::Upload(GLsizeiptr size, const GLvoid* data, GLenum usage)
 {
     ScopedBufferBind binder(*this);
 
@@ -181,17 +199,17 @@ void VertexBuffer::Upload(GLsizeiptr size, const GLvoid* data, GLenum usage)
     CheckGLErrors();
 }
 
-GLenum VertexBuffer::GetTarget() const
+GLenum Buffer::GetTarget() const
 {
     return mTarget;
 }
 
-GLuint VertexBuffer::GetGLHandle() const
+GLuint Buffer::GetGLHandle() const
 {
     return mHandle;
 }
 
-ScopedBufferBind::ScopedBufferBind(const VertexBuffer& bound)
+ScopedBufferBind::ScopedBufferBind(const Buffer& bound)
     : mTarget(bound.GetTarget())
 {
     glBindBuffer(bound.GetTarget(), bound.GetGLHandle());
@@ -224,14 +242,14 @@ VertexArray::VertexArray()
 
 void VertexArray::SetAttribute(
         GLuint index,
-        const VertexBuffer& buffer,
+        const std::shared_ptr<Buffer>& buffer,
         GLint size,
         GLenum type,
         GLboolean normalized,
         GLsizei stride,
         GLsizei offset)
 {
-    if (buffer.GetTarget() != GL_ARRAY_BUFFER)
+    if (buffer->GetTarget() != GL_ARRAY_BUFFER)
     {
         throw std::logic_error("Only GL_ARRAY_BUFFERs can be used as attributes.");
     }
@@ -242,16 +260,18 @@ void VertexArray::SetAttribute(
     CheckGLErrors();
 
     {
-        ScopedBufferBind bufferBind(buffer);
+        ScopedBufferBind bufferBind(*buffer);
 
         glVertexAttribPointer(index, size, type, normalized, stride, (const GLvoid*) offset);
         CheckGLErrors();
+
+        mVertexBuffers[index] = buffer;
     }
 }
 
-void VertexArray::SetIndexBuffer(const VertexBuffer& buffer)
+void VertexArray::SetIndexBuffer(const std::shared_ptr<Buffer>& buffer)
 {
-    if (buffer.GetTarget() != GL_ELEMENT_ARRAY_BUFFER)
+    if (buffer->GetTarget() != GL_ELEMENT_ARRAY_BUFFER)
     {
         throw std::logic_error("Only GL_ELEMENT_ARRAY_BUFFERs can be used as index buffers.");
     }
@@ -259,8 +279,10 @@ void VertexArray::SetIndexBuffer(const VertexBuffer& buffer)
     ScopedVertexArrayBind binder(*this);
 
     // spookiest, most unobviously documented thing about the GL spec I found so far.
-    glBindBuffer(buffer.GetTarget(), buffer.GetGLHandle());
+    glBindBuffer(buffer->GetTarget(), buffer->GetGLHandle());
     CheckGLErrors();
+
+    mIndexBuffer = buffer;
 }
 
 GLuint VertexArray::GetGLHandle() const

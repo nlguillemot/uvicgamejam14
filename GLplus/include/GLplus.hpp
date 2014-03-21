@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 
 #include <memory>
+#include <unordered_map>
 
 namespace GLplus
 {
@@ -18,10 +19,14 @@ class Shader
     GLuint mHandle = 0;
     std::unique_ptr<GLuint, ShaderDeleter> mHandlePtr;
 
+    GLenum mShaderType;
+
 public:
-    Shader(GLenum shadertype);
+    Shader(GLenum shaderType);
 
     void Compile(const GLchar* source);
+
+    GLenum GetShaderType() const;
 
     GLuint GetGLHandle() const;
 };
@@ -36,10 +41,13 @@ class Program
     GLuint mHandle = 0;
     std::unique_ptr<GLuint, ProgramDeleter> mHandlePtr;
 
+    std::shared_ptr<Shader> mFragmentShader;
+    std::shared_ptr<Shader> mVertexShader;
+
 public:
     Program();
 
-    void Attach(Shader& shader);
+    void Attach(const std::shared_ptr<Shader>& shader);
     void Link();
 
     GLint GetAttributeLocation(const GLchar* name) const;
@@ -54,20 +62,20 @@ public:
     ~ScopedProgramBind();
 };
 
-class VertexBuffer
+class Buffer
 {
-    struct VertexBufferDeleter
+    struct BufferDeleter
     {
         void operator()(GLuint* handle) const;
     };
 
     GLuint mHandle = 0;
-    std::unique_ptr<GLuint, VertexBufferDeleter> mHandlePtr;
+    std::unique_ptr<GLuint, BufferDeleter> mHandlePtr;
 
     GLenum mTarget;
 
 public:
-    VertexBuffer(GLenum target);
+    Buffer(GLenum target);
 
     void Upload(GLsizeiptr size, const GLvoid* data, GLenum usage);
 
@@ -81,7 +89,7 @@ class ScopedBufferBind
     GLenum mTarget;
 
 public:
-    ScopedBufferBind(const VertexBuffer& bound);
+    ScopedBufferBind(const Buffer& bound);
     ~ScopedBufferBind();
 };
 
@@ -95,19 +103,22 @@ class VertexArray
     GLuint mHandle = 0;
     std::unique_ptr<GLuint, VertexArrayDeleter> mHandlePtr;
 
+    std::unordered_map<GLuint, std::shared_ptr<Buffer> > mVertexBuffers;
+    std::shared_ptr<Buffer> mIndexBuffer;
+
 public:
     VertexArray();
 
     void SetAttribute(
             GLuint index,
-            const VertexBuffer& buffer,
+            const std::shared_ptr<Buffer>& buffer,
             GLint size,
             GLenum type,
             GLboolean normalized,
             GLsizei stride,
             GLsizei offset);
 
-    void SetIndexBuffer(const VertexBuffer& buffer);
+    void SetIndexBuffer(const std::shared_ptr<Buffer>& buffer);
 
     GLuint GetGLHandle() const;
 };

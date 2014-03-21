@@ -1,0 +1,6 @@
+bin/soil2*
+obj/*
+make/*
+lib/*
+projects/*
+*.DS_Store*

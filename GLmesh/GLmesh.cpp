@@ -32,21 +32,21 @@ void StaticMesh::LoadShape(const tinyobj::shape_t& shape)
 
     if (!shape.mesh.normals.empty())
     {
-        newPositions.reset(new GLplus::Buffer(GL_ARRAY_BUFFER));
-        newPositions->Upload(
+        newNormals.reset(new GLplus::Buffer(GL_ARRAY_BUFFER));
+        newNormals->Upload(
                     shape.mesh.normals.size() * sizeof(shape.mesh.normals[0]),
                     shape.mesh.normals.data(), GL_STATIC_DRAW);
     }
 
     if (!shape.mesh.texcoords.empty())
     {
-        newPositions.reset(new GLplus::Buffer(GL_ARRAY_BUFFER));
-        newPositions->Upload(
+        newTexcoords.reset(new GLplus::Buffer(GL_ARRAY_BUFFER));
+        newTexcoords->Upload(
                     shape.mesh.texcoords.size() * sizeof(shape.mesh.texcoords[0]),
                     shape.mesh.texcoords.data(), GL_STATIC_DRAW);
     }
 
-    mVertexCount = shape.mesh.indices.size() / 3;
+    mVertexCount = shape.mesh.indices.size();
 
     mIndices = std::move(newIndices);
     mPositions = std::move(newPositions);

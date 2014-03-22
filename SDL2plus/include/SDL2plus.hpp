@@ -37,6 +37,9 @@ class Window
 public:
     Window(int width, int height, const char* title, Uint32 flags = 0);
 
+    int GetWidth() const;
+    int GetHeight() const;
+
     void GLSwapWindow();
 
     SDL_Window* GetSDLHandle() const;

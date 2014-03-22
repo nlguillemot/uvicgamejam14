@@ -68,6 +68,20 @@ Window::Window(int width, int height, const char *title, Uint32 flags)
     }
 }
 
+int Window::GetWidth() const
+{
+    int w;
+    SDL_GetWindowSize(GetSDLHandle(), &w, NULL);
+    return w;
+}
+
+int Window::GetHeight() const
+{
+    int h;
+    SDL_GetWindowSize(GetSDLHandle(), NULL, &h);
+    return h;
+}
+
 void Window::GLSwapWindow()
 {
     if (!mGLContextHandle)

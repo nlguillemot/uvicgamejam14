@@ -1,7 +1,7 @@
 #include <SDL.h>
 #include <SOIL2.h>
 #include <glm/glm.hpp>
-#include <glm/gtx/matrix_operation.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <stdio.h>
 
 #include <SDL2plus.hpp>
@@ -13,17 +13,23 @@
 static const char* VertexShaderSource =
         "#version 130\n"
         "in vec4 position;\n"
+        "in vec3 normal;\n"
         "uniform mat4 modelview;\n"
         "uniform mat4 projection;\n"
+        "uniform vec4 offset;\n"
+        "out vec3 fnormal;\n"
         "void main() {\n"
-        "    gl_Position = position;\n"
+        "    fnormal = normal;\n"
+        "    vec4 pos = projection * modelview * position;"
+        "    gl_Position = offset * pos.w + pos;\n"
         "}";
 
 static const char* FragmentShaderSource =
         "#version 130\n"
         "out vec4 color;\n"
+        "in vec3 fnormal;\n"
         "void main() {\n"
-        "    color = vec4(1,0,0,1);\n"
+        "    color = vec4((fnormal + vec4(1))/2,1);\n"
         "}";
 
 void run()
@@ -35,7 +41,7 @@ void run()
     sdl.SetGLAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // create the window
-    SDL2plus::Window window(640, 480, "Game", SDL_WINDOW_OPENGL);
+    SDL2plus::Window window(1280, 800, "Game", SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN);
 
     // link shaders into a program
     GLplus::Program shaderProgram;
@@ -54,7 +60,6 @@ void run()
     }
 
     GLmesh::StaticMesh cubeMesh;
-
     {
         std::vector<tinyobj::shape_t> shapes;
         tinyobj::LoadObj(shapes, "cube.obj");
@@ -64,6 +69,8 @@ void run()
         }
         cubeMesh.LoadShape(shapes.front());
     }
+
+    glEnable(GL_DEPTH_TEST);
 
     // begin main loop
     int isGameRunning = 1;
@@ -79,9 +86,51 @@ void run()
             }
         }
 
+        auto render = [&](glm::vec4 normalizedOffset, float noseToEyeDistance, float rotation) {
+            glm::vec3 center(0.0f);
+            glm::vec3 eyePoint = glm::vec3(0.0f, 5.0f, 5.0f);
+            glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f);
+            glm::vec3 eyeToCenter = glm::normalize(center - eyePoint);
+            glm::vec3 across = glm::normalize(glm::cross(eyeToCenter,up));
+            eyePoint += across * noseToEyeDistance;
+
+            glm::mat4 worldview = glm::lookAt(eyePoint, center, up);
+            glm::mat4 scaleM = glm::scale(glm::mat4(), glm::vec3(4.0f,1.0f,1.0f));
+            glm::mat4 rotM = glm::rotate(glm::mat4(), rotation, glm::vec3(0.0f,1.0f,0.0f));
+            glm::mat4 modelview = rotM * scaleM;
+            modelview = worldview * modelview;
+
+            glm::mat4 projection = glm::perspective(90.0f, (float) window.GetWidth() / 2 / window.GetHeight(), 0.1f, 100.0f);
+
+            shaderProgram.UploadMatrix4("modelview", GL_FALSE, &modelview[0][0]);
+            shaderProgram.UploadMatrix4("projection", GL_FALSE, &projection[0][0]);
+            shaderProgram.UploadVec4("offset", &normalizedOffset[0]);
+
+            cubeMesh.Render(shaderProgram);
+        };
+
+        glClearColor(1.0f,1.0f,1.0f,1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        cubeMesh.Render(shaderProgram);
+        static float noseToEyeDistance = 0.13f;
+        const float noseToEyeDistanceDelta = 0.01f;
+
+        const Uint8 *keyboardState = SDL_GetKeyboardState(NULL);
+        if (keyboardState[SDL_SCANCODE_LEFT])
+        {
+            noseToEyeDistance -= noseToEyeDistanceDelta;
+        }
+        if (keyboardState[SDL_SCANCODE_RIGHT])
+        {
+            noseToEyeDistance += noseToEyeDistanceDelta;
+        }
+
+        float rotation = SDL_GetTicks() / 1000.0f * 90.0f;
+        glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
+        render(glm::vec4(0.15f,0.0f,0.0f,0.0f), -noseToEyeDistance, rotation);
+
+        glViewport(window.GetWidth() / 2, 0, window.GetWidth() / 2, window.GetHeight());
+        render(glm::vec4(-0.15f,0.0f,0.0f,0.0f), noseToEyeDistance, rotation);
 
         // flip the display
         window.GLSwapWindow();

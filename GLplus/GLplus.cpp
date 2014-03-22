@@ -171,6 +171,51 @@ GLint Program::GetAttributeLocation(const GLchar* name) const
     return loc;
 }
 
+bool Program::TryGetUniformLocation(const GLchar* name, GLint& loc) const
+{
+    GLint location = glGetUniformLocation(mHandle, name);
+    if (location == -1)
+    {
+        return false;
+    }
+
+    loc = location;
+    return true;
+}
+GLint Program::GetUniformLocation(const GLchar* name) const
+{
+    GLint loc;
+    if (!TryGetUniformLocation(name, loc))
+    {
+        throw std::runtime_error("Couldn't find uniform.");
+    }
+    return loc;
+}
+
+void Program::UploadVec4(const GLchar* name, const GLfloat* values)
+{
+    UploadVec4(GetUniformLocation(name), values);
+}
+
+void Program::UploadVec4(GLint location, const GLfloat* values)
+{
+    ScopedProgramBind binder(*this);
+    glUniform4fv(location, 1, values);
+    CheckGLErrors();
+}
+
+void Program::UploadMatrix4(const GLchar* name, GLboolean transpose, const GLfloat* values)
+{
+    UploadMatrix4(GetUniformLocation(name), transpose, values);
+}
+
+void Program::UploadMatrix4(GLint location, GLboolean transpose, const GLfloat* values)
+{
+    ScopedProgramBind binder(*this);
+    glUniformMatrix4fv(location, 1, transpose, values);
+    CheckGLErrors();
+}
+
 GLuint Program::GetGLHandle() const
 {
     return mHandle;
@@ -178,13 +223,16 @@ GLuint Program::GetGLHandle() const
 
 ScopedProgramBind::ScopedProgramBind(const Program& bound)
 {
+    glGetIntegerv(GL_CURRENT_PROGRAM, &mOldProgram);
+    CheckGLErrors();
+
     glUseProgram(bound.GetGLHandle());
     CheckGLErrors();
 }
 
 ScopedProgramBind::~ScopedProgramBind()
 {
-    glUseProgram(0);
+    glUseProgram(mOldProgram);
     CheckGLErrors();
 }
 
@@ -228,13 +276,18 @@ GLuint Buffer::GetGLHandle() const
 ScopedBufferBind::ScopedBufferBind(const Buffer& bound)
     : mTarget(bound.GetTarget())
 {
+    if (bound.GetTarget() == GL_ARRAY_BUFFER)
+    {
+        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &mOldBuffer);
+        CheckGLErrors();
+    }
     glBindBuffer(bound.GetTarget(), bound.GetGLHandle());
     CheckGLErrors();
 }
 
 ScopedBufferBind::~ScopedBufferBind()
 {
-    glBindBuffer(mTarget, 0);
+    glBindBuffer(mTarget, mOldBuffer);
     CheckGLErrors();
 }
 
@@ -318,13 +371,16 @@ GLuint VertexArray::GetGLHandle() const
 
 ScopedVertexArrayBind::ScopedVertexArrayBind(const VertexArray& bound)
 {
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &mOldVertexArray);
+    CheckGLErrors();
+
     glBindVertexArray(bound.GetGLHandle());
     CheckGLErrors();
 }
 
 ScopedVertexArrayBind::~ScopedVertexArrayBind()
 {
-    glBindVertexArray(0);
+    glBindVertexArray(mOldVertexArray);
     CheckGLErrors();
 }
 

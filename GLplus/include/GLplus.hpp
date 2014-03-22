@@ -53,11 +53,22 @@ public:
     bool TryGetAttributeLocation(const GLchar* name, GLint& loc) const;
     GLint GetAttributeLocation(const GLchar* name) const;
 
+    bool TryGetUniformLocation(const GLchar* name, GLint& loc) const;
+    GLint GetUniformLocation(const GLchar* name) const;
+
+    void UploadVec4(const GLchar* name, const GLfloat* values);
+    void UploadVec4(GLint location, const GLfloat* values);
+
+    void UploadMatrix4(const GLchar* name, GLboolean transpose, const GLfloat* values);
+    void UploadMatrix4(GLint location, GLboolean transpose, const GLfloat* values);
+
     GLuint GetGLHandle() const;
 };
 
 class ScopedProgramBind
 {
+    GLint mOldProgram;
+
 public:
     ScopedProgramBind(const Program& bound);
     ~ScopedProgramBind();
@@ -87,6 +98,7 @@ public:
 
 class ScopedBufferBind
 {
+    GLint mOldBuffer;
     GLenum mTarget;
 
 public:
@@ -131,6 +143,8 @@ public:
 
 class ScopedVertexArrayBind
 {
+    GLint mOldVertexArray;
+
 public:
     ScopedVertexArrayBind(const VertexArray& bound);
     ~ScopedVertexArrayBind();

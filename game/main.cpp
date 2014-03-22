@@ -14,13 +14,16 @@ static const char* VertexShaderSource =
         "#version 130\n"
         "in vec4 position;\n"
         "in vec3 normal;\n"
+        "in vec2 texcoord0;\n"
+        "out vec3 fnormal;\n"
+        "out vec2 ftexcoord0;\n"
         "uniform mat4 modelview;\n"
         "uniform mat4 projection;\n"
         "uniform vec4 offset;\n"
-        "out vec3 fnormal;\n"
         "void main() {\n"
         "    fnormal = normal;\n"
-        "    vec4 pos = projection * modelview * position;"
+        "    ftexcoord0 = texcoord0;\n"
+        "    vec4 pos = projection * modelview * position;\n"
         "    gl_Position = offset * pos.w + pos;\n"
         "}";
 
@@ -28,8 +31,11 @@ static const char* FragmentShaderSource =
         "#version 130\n"
         "out vec4 color;\n"
         "in vec3 fnormal;\n"
+        "in vec2 ftexcoord0;\n"
+        "uniform sampler2D diffuseTexture;\n"
         "void main() {\n"
-        "    color = vec4((fnormal + vec4(1))/2,1);\n"
+        "    color = texture(diffuseTexture, ftexcoord0);\n"
+        "    // color = vec4((fnormal + vec4(1))/2,1);\n"
         "}";
 
 void run()
@@ -125,7 +131,7 @@ void run()
             noseToEyeDistance += noseToEyeDistanceDelta;
         }
 
-        float rotation = SDL_GetTicks() / 1000.0f * 90.0f;
+        float rotation = 70; // SDL_GetTicks() / 1000.0f * 90.0f;
         glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
         render(glm::vec4(0.15f,0.0f,0.0f,0.0f), -noseToEyeDistance, rotation);
 

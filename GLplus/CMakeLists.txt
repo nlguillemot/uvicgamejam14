@@ -11,13 +11,15 @@ ENDIF ()
 INCLUDE_DIRECTORIES(
     include
     ${OPENGL_INCLUDE_DIR}
-    ${glew_SOURCE_DIR}/include)
+    ${glew_SOURCE_DIR}/include
+    ${soil2_SOURCE_DIR}/include)
 
 ADD_LIBRARY(GLplus
     include/GLplus.hpp
     GLplus.cpp)
 
 TARGET_LINK_LIBRARIES(GLplus
+    soil2
     glew-static)
 
 TARGET_LINK_LIBRARIES(GLplus ${OPENGL_LIBRARIES})

@@ -56,6 +56,9 @@ public:
     bool TryGetUniformLocation(const GLchar* name, GLint& loc) const;
     GLint GetUniformLocation(const GLchar* name) const;
 
+    void UploadUint(const GLchar* name, GLuint value);
+    void UploadUint(GLint location, GLuint value);
+
     void UploadVec4(const GLchar* name, const GLfloat* values);
     void UploadVec4(GLint location, const GLfloat* values);
 
@@ -148,6 +151,46 @@ class ScopedVertexArrayBind
 public:
     ScopedVertexArrayBind(const VertexArray& bound);
     ~ScopedVertexArrayBind();
+};
+
+class Texture
+{
+    struct TextureDeleter
+    {
+        void operator()(GLuint*) const;
+    };
+
+    GLuint mHandle = 0;
+    std::unique_ptr<GLuint, TextureDeleter> mHandlePtr;
+
+    int mWidth;
+    int mHeight;
+
+public:
+    enum LoadFlags
+    {
+        InvertY
+    };
+
+    Texture();
+    
+    void LoadImage(const char* filename, unsigned int flags = InvertY);
+
+    int GetWidth() const;
+    int GetHeight() const;
+
+    GLuint GetGLHandle() const;
+};
+
+class ScopedTextureBind
+{
+    GLint mOldTexture;
+    GLint mOldTextureIndex;
+    GLenum mTextureIndex;
+
+public:
+    ScopedTextureBind(const Texture& bound, GLenum textureIndex);
+    ~ScopedTextureBind();
 };
 
 constexpr size_t SizeFromGLType(GLenum type)

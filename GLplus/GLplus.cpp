@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "SOIL2.h"
+
 namespace GLplus
 {
 
@@ -190,6 +192,18 @@ GLint Program::GetUniformLocation(const GLchar* name) const
         throw std::runtime_error("Couldn't find uniform.");
     }
     return loc;
+}
+
+void Program::UploadUint(const GLchar* name, GLuint value)
+{
+    UploadUint(GetUniformLocation(name), value);
+}
+
+void Program::UploadUint(GLint location, GLuint value)
+{
+    ScopedProgramBind binder(*this);
+    glUniform1u(location, value);
+    CheckGLErrors();
 }
 
 void Program::UploadVec4(const GLchar* name, const GLfloat* values)
@@ -381,6 +395,94 @@ ScopedVertexArrayBind::ScopedVertexArrayBind(const VertexArray& bound)
 ScopedVertexArrayBind::~ScopedVertexArrayBind()
 {
     glBindVertexArray(mOldVertexArray);
+    CheckGLErrors();
+}
+
+Texture::TextureDeleter::operator()(GLuint* handle) const
+{
+    glDeleteTextures(1, handle);
+    CheckGLErrors();
+}
+
+Texture::Texture()
+    : mHandlePtr(&mHandle)
+{
+    glGenTextures(1, &mHandle);
+    CheckGLErrors();
+
+    if (!mHandle)
+    {
+        throw std::runtime_error("glGenTextures");
+    }
+}
+
+void Texture::LoadImage(const char* filename, unsigned int flags)
+{
+    unsigned int soilFlags = 0;
+    if (flags & InvertY)
+    {
+        soilFlags |= SOIL_FLAG_INVERT_Y;
+    }
+
+    int width, height;
+    if (!SOIL_load_OGL_texture(filename,
+                &width, &height, NULL,
+                SOIL_LOAD_AUTO,
+                mHandle,
+                soilFlags))
+    {
+        throw std::runtime_error(SOIL_last_result());
+    }
+
+    mWidth = width;
+    mHeight = height;
+}
+
+int Texture::GetWidth() const
+{
+    if (!mHandle)
+    {
+        throw std::runtime_error("Texture not loaded.");
+    }
+    return mWidth;
+}
+
+int Texture::GetHeight() const
+{
+    if (!mHandle)
+    {
+        throw std::runtime_error("Texture not loaded.");
+    }
+    return mHeight;
+}
+
+GLuint Texture::GetGLHandle() const
+{
+    return mHandle;
+}
+
+ScopedTextureBind::ScopedTextureBind(const Texture& bound, GLenum textureIndex)
+    : mTextureIndex(textureIndex)
+{
+    glGetIntegerv(GL_ACTIVE_TEXTURE, &mOldTextureIndex);
+    CheckGLErrors();
+
+    glActiveTexture(mTextureIndex);
+    CheckGLErrors();
+
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &mOldTexture);
+    CheckGLErrors();
+
+    glBindTexture(GL_TEXTURE_2D, bound.GetGLHandle());
+    CheckGLErrors();
+}
+
+ScopedTextureBind::~ScopedTextureBind()
+{
+    glBindTexture(GL_TEXTURE_2D, mOldTexture);
+    CheckGLErrors();
+
+    glActiveTexture(mOldTextureIndex);
     CheckGLErrors();
 }
 

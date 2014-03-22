@@ -20,6 +20,8 @@ class StaticMesh
 
     size_t mVertexCount = 0;
 
+    std::shared_ptr<GLplus::Texture> mDiffuseTexture;
+
 public:
     void LoadShape(const tinyobj::shape_t& shape);
 

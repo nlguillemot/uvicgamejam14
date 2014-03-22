@@ -16,6 +16,7 @@ void StaticMesh::LoadShape(const tinyobj::shape_t& shape)
     std::shared_ptr<GLplus::Buffer> newPositions;
     std::shared_ptr<GLplus::Buffer> newNormals;
     std::shared_ptr<GLplus::Buffer> newTexcoords;
+    std::shared_ptr<GLplus::Texture> newDiffuseTexture;
 
     newIndices.reset(new GLplus::Buffer(GL_ELEMENT_ARRAY_BUFFER));
     newIndices->Upload(
@@ -46,12 +47,19 @@ void StaticMesh::LoadShape(const tinyobj::shape_t& shape)
                     shape.mesh.texcoords.data(), GL_STATIC_DRAW);
     }
 
+    if (!shape.material.diffuse_texname.empty())
+    {
+        newDiffuseTexture.reset(new GLplus::Texture());
+        newDiffuseTexture->LoadImage(shape.material.diffuse_texname.c_str());
+    }
+
     mVertexCount = shape.mesh.indices.size();
 
     mIndices = std::move(newIndices);
     mPositions = std::move(newPositions);
     mTexcoords = std::move(newTexcoords);
     mNormals = std::move(newNormals);
+    mDiffuseTexture = std::move(newDiffuseTexture);
 }
 
 void StaticMesh::Render(const GLplus::Program& program) const
@@ -91,6 +99,13 @@ void StaticMesh::Render(const GLplus::Program& program) const
                         texcoord0Loc, mTexcoords,
                         2, GL_FLOAT, GL_FALSE, 0, 0);
         }
+    }
+
+    std::unique_ptr<ScopedTextureBind> diffuseBind;
+    if (mDiffuseTexture)
+    {
+        diffuseBind.reset(new ScopedTextureBind(*mDiffuseTexture, GL_TEXTURE0));
+        program.UploadUint("diffuseTexture", 0);
     }
 
     DrawElements(program, vertexArray,

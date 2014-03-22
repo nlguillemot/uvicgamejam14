@@ -68,7 +68,7 @@ void run()
     GLmesh::StaticMesh cubeMesh;
     {
         std::vector<tinyobj::shape_t> shapes;
-        tinyobj::LoadObj(shapes, "cube.obj");
+        tinyobj::LoadObj(shapes, "box.obj");
         if (shapes.empty())
         {
             throw std::runtime_error("Expected shapes.");
@@ -101,7 +101,7 @@ void run()
             eyePoint += across * noseToEyeDistance;
 
             glm::mat4 worldview = glm::lookAt(eyePoint, center, up);
-            glm::mat4 scaleM = glm::scale(glm::mat4(), glm::vec3(4.0f,1.0f,1.0f));
+            glm::mat4 scaleM = glm::scale(glm::mat4(), glm::vec3(1.0f,1.0f,1.0f));
             glm::mat4 rotM = glm::rotate(glm::mat4(), rotation, glm::vec3(0.0f,1.0f,0.0f));
             glm::mat4 modelview = rotM * scaleM;
             modelview = worldview * modelview;
@@ -131,7 +131,7 @@ void run()
             noseToEyeDistance += noseToEyeDistanceDelta;
         }
 
-        float rotation = 70; // SDL_GetTicks() / 1000.0f * 90.0f;
+        float rotation = SDL_GetTicks() / 1000.0f * 90.0f;
         glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
         render(glm::vec4(0.15f,0.0f,0.0f,0.0f), -noseToEyeDistance, rotation);
 

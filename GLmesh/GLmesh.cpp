@@ -101,10 +101,10 @@ void StaticMesh::Render(const GLplus::Program& program) const
         }
     }
 
-    std::unique_ptr<ScopedTextureBind> diffuseBind;
+    std::unique_ptr<GLplus::ScopedTextureBind> diffuseBind;
     if (mDiffuseTexture)
     {
-        diffuseBind.reset(new ScopedTextureBind(*mDiffuseTexture, GL_TEXTURE0));
+        diffuseBind.reset(new GLplus::ScopedTextureBind(*mDiffuseTexture, GL_TEXTURE0));
         program.UploadUint("diffuseTexture", 0);
     }
 

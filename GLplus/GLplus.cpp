@@ -194,36 +194,36 @@ GLint Program::GetUniformLocation(const GLchar* name) const
     return loc;
 }
 
-void Program::UploadUint(const GLchar* name, GLuint value)
+void Program::UploadUint(const GLchar* name, GLuint value) const
 {
     UploadUint(GetUniformLocation(name), value);
 }
 
-void Program::UploadUint(GLint location, GLuint value)
+void Program::UploadUint(GLint location, GLuint value) const
 {
     ScopedProgramBind binder(*this);
-    glUniform1u(location, value);
+    glUniform1i(location, value);
     CheckGLErrors();
 }
 
-void Program::UploadVec4(const GLchar* name, const GLfloat* values)
+void Program::UploadVec4(const GLchar* name, const GLfloat* values) const
 {
     UploadVec4(GetUniformLocation(name), values);
 }
 
-void Program::UploadVec4(GLint location, const GLfloat* values)
+void Program::UploadVec4(GLint location, const GLfloat* values) const
 {
     ScopedProgramBind binder(*this);
     glUniform4fv(location, 1, values);
     CheckGLErrors();
 }
 
-void Program::UploadMatrix4(const GLchar* name, GLboolean transpose, const GLfloat* values)
+void Program::UploadMatrix4(const GLchar* name, GLboolean transpose, const GLfloat* values) const
 {
     UploadMatrix4(GetUniformLocation(name), transpose, values);
 }
 
-void Program::UploadMatrix4(GLint location, GLboolean transpose, const GLfloat* values)
+void Program::UploadMatrix4(GLint location, GLboolean transpose, const GLfloat* values) const
 {
     ScopedProgramBind binder(*this);
     glUniformMatrix4fv(location, 1, transpose, values);
@@ -398,7 +398,7 @@ ScopedVertexArrayBind::~ScopedVertexArrayBind()
     CheckGLErrors();
 }
 
-Texture::TextureDeleter::operator()(GLuint* handle) const
+void Texture::TextureDeleter::operator()(GLuint* handle) const
 {
     glDeleteTextures(1, handle);
     CheckGLErrors();

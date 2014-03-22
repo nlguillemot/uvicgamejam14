@@ -56,14 +56,14 @@ public:
     bool TryGetUniformLocation(const GLchar* name, GLint& loc) const;
     GLint GetUniformLocation(const GLchar* name) const;
 
-    void UploadUint(const GLchar* name, GLuint value);
-    void UploadUint(GLint location, GLuint value);
+    void UploadUint(const GLchar* name, GLuint value) const;
+    void UploadUint(GLint location, GLuint value) const;
 
-    void UploadVec4(const GLchar* name, const GLfloat* values);
-    void UploadVec4(GLint location, const GLfloat* values);
+    void UploadVec4(const GLchar* name, const GLfloat* const values) const;
+    void UploadVec4(GLint location, const GLfloat* values) const;
 
-    void UploadMatrix4(const GLchar* name, GLboolean transpose, const GLfloat* values);
-    void UploadMatrix4(GLint location, GLboolean transpose, const GLfloat* values);
+    void UploadMatrix4(const GLchar* name, GLboolean transpose, const GLfloat* values) const;
+    void UploadMatrix4(GLint location, GLboolean transpose, const GLfloat* values) const;
 
     GLuint GetGLHandle() const;
 };
@@ -169,6 +169,7 @@ class Texture
 public:
     enum LoadFlags
     {
+        NoFlags = 0,
         InvertY
     };
 

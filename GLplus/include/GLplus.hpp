@@ -50,6 +50,7 @@ public:
     void Attach(const std::shared_ptr<Shader>& shader);
     void Link();
 
+    bool TryGetAttributeLocation(const GLchar* name, GLint& loc) const;
     GLint GetAttributeLocation(const GLchar* name) const;
 
     GLuint GetGLHandle() const;
@@ -105,6 +106,7 @@ class VertexArray
 
     std::unordered_map<GLuint, std::shared_ptr<Buffer> > mVertexBuffers;
     std::shared_ptr<Buffer> mIndexBuffer;
+    GLenum mIndexType = 0;
 
 public:
     VertexArray();
@@ -118,7 +120,11 @@ public:
             GLsizei stride,
             GLsizei offset);
 
-    void SetIndexBuffer(const std::shared_ptr<Buffer>& buffer);
+    void SetIndexBuffer(
+            const std::shared_ptr<Buffer>& buffer,
+            GLenum type);
+
+    GLenum GetIndexType() const;
 
     GLuint GetGLHandle() const;
 };
@@ -130,7 +136,21 @@ public:
     ~ScopedVertexArrayBind();
 };
 
+constexpr size_t SizeFromGLType(GLenum type)
+{
+    return type == GL_UNSIGNED_INT   ? sizeof(GLuint)   :
+           type == GL_INT            ? sizeof(GLint)    :
+           type == GL_UNSIGNED_SHORT ? sizeof(GLushort) :
+           type == GL_SHORT          ? sizeof(GLshort)  :
+           type == GL_UNSIGNED_BYTE  ? sizeof(GLubyte)  :
+           type == GL_BYTE           ? sizeof(GLbyte)   :
+           throw "Unimplemented Type";
+}
+
 void DrawArrays(const Program& program, const VertexArray& model,
+                GLenum mode, GLint first, GLsizei count);
+
+void DrawElements(const Program& program, const VertexArray& model,
                 GLenum mode, GLint first, GLsizei count);
 
 } // end namespace GLplus

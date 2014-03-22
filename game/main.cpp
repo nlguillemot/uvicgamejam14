@@ -1,22 +1,20 @@
 #include <SDL.h>
 #include <SOIL2.h>
-
+#include <glm/glm.hpp>
+#include <glm/gtx/matrix_operation.hpp>
 #include <stdio.h>
 
 #include <SDL2plus.hpp>
 #include <GLplus.hpp>
-
-// a boring triangle
-static const GLfloat TriangleData[] = {
-     1,-1,-1,
-    -1,-1,-1,
-     1, 1,-1
-};
+#include <GLmesh.hpp>
+#include <tiny_obj_loader.h>
 
 // source code for the vertex shader and fragment shader
 static const char* VertexShaderSource =
         "#version 130\n"
         "in vec4 position;\n"
+        "uniform mat4 modelview;\n"
+        "uniform mat4 projection;\n"
         "void main() {\n"
         "    gl_Position = position;\n"
         "}";
@@ -55,18 +53,16 @@ void run()
         shaderProgram.Link();
     }
 
-    // create a vertex buffer object to store the vertices
-    std::shared_ptr<GLplus::Buffer> positionVertexData = std::make_shared<GLplus::Buffer>(GL_ARRAY_BUFFER);
-    positionVertexData->Upload(sizeof(TriangleData), TriangleData, GL_STATIC_DRAW);
+    GLmesh::StaticMesh cubeMesh;
 
-    // create a VAO to hold the model
-    GLplus::VertexArray model;
     {
-        // get positions of attributes
-        GLint positionAttributeLocation = shaderProgram.GetAttributeLocation("position");
-
-        // specify the layout of the position attribute
-        model.SetAttribute(positionAttributeLocation, positionVertexData, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        std::vector<tinyobj::shape_t> shapes;
+        tinyobj::LoadObj(shapes, "cube.obj");
+        if (shapes.empty())
+        {
+            throw std::runtime_error("Expected shapes.");
+        }
+        cubeMesh.LoadShape(shapes.front());
     }
 
     // begin main loop
@@ -83,9 +79,9 @@ void run()
             }
         }
 
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-        DrawArrays(shaderProgram, model, GL_TRIANGLES, 0, 3);
+        cubeMesh.Render(shaderProgram);
 
         // flip the display
         window.GLSwapWindow();
@@ -104,7 +100,7 @@ int main(int argc, char *argv[])
     catch (const std::exception& e)
     {
         fprintf(stderr, "Fatal exception: %s\n", e.what());
-        return -1;
+        throw;
     }
     catch (...)
     {

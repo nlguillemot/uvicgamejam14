@@ -148,10 +148,26 @@ void Program::Link()
     }
 }
 
+bool Program::TryGetAttributeLocation(const GLchar* name, GLint& loc) const
+{
+    GLint location = glGetAttribLocation(mHandle, name);
+    CheckGLErrors();
+    if (location == -1)
+    {
+        return false;
+    }
+
+    loc = location;
+    return true;
+}
+
 GLint Program::GetAttributeLocation(const GLchar* name) const
 {
-    GLint loc = glGetAttribLocation(mHandle, name);
-    CheckGLErrors();
+    GLint loc;
+    if (!TryGetAttributeLocation(name, loc))
+    {
+        throw std::runtime_error("Couldn't find attribute.");
+    }
     return loc;
 }
 
@@ -269,7 +285,7 @@ void VertexArray::SetAttribute(
     }
 }
 
-void VertexArray::SetIndexBuffer(const std::shared_ptr<Buffer>& buffer)
+void VertexArray::SetIndexBuffer(const std::shared_ptr<Buffer>& buffer, GLenum type)
 {
     if (buffer->GetTarget() != GL_ELEMENT_ARRAY_BUFFER)
     {
@@ -283,6 +299,16 @@ void VertexArray::SetIndexBuffer(const std::shared_ptr<Buffer>& buffer)
     CheckGLErrors();
 
     mIndexBuffer = buffer;
+    mIndexType = type;
+}
+
+GLenum VertexArray::GetIndexType() const
+{
+    if (!mIndexType)
+    {
+        throw std::runtime_error("VertexArray has no index type.");
+    }
+    return mIndexType;
 }
 
 GLuint VertexArray::GetGLHandle() const
@@ -310,6 +336,16 @@ void DrawArrays(const Program &program, const VertexArray &model,
 
     glDrawArrays(mode, first, count);
     CheckGLErrors();
+}
+
+void DrawElements(const Program& program, const VertexArray& model,
+                  GLenum mode, GLint first, GLsizei count)
+{
+    ScopedProgramBind programBind(program);
+    ScopedVertexArrayBind modelBind(model);
+
+    glDrawElements(mode, count, model.GetIndexType(),
+                   (const GLvoid*) (SizeFromGLType(model.GetIndexType()) * first));
 }
 
 } // end namespace GLplus

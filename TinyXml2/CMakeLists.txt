@@ -1,0 +1,6 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+PROJECT(TinyXml2 CXX)
+
+ADD_LIBRARY(TinyXml2 include/tinyxml2.h tinyxml2.cpp)
+INCLUDE_DIRECTORIES(include)

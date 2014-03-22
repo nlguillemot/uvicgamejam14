@@ -2,14 +2,15 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 PROJECT(game CXX)
 
-IF (UNIX)
+IF(UNIX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf-3 -std=c++11")
-ENDIF ()
+ENDIF()
 
 ADD_EXECUTABLE(game
     main.cpp)
 
 TARGET_LINK_LIBRARIES(game
+    ovr
     GLplus
     tinyobjloader
     GLmesh
@@ -21,6 +22,7 @@ TARGET_LINK_LIBRARIES(game
     soil2)
 
 INCLUDE_DIRECTORIES(
+    ${OVR_SOURCE_DIR}/include
     ${tinyobjloader_SOURCE_DIR}/include
     ${lua_SOURCE_DIR}/include
     ${SDL2_SOURCE_DIR}/include

@@ -9,6 +9,8 @@
 #include <GLmesh.hpp>
 #include <tiny_obj_loader.h>
 
+#include <OVR.h>
+
 // source code for the vertex shader and fragment shader
 static const char* VertexShaderSource =
         "#version 130\n"

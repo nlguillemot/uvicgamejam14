@@ -121,3 +121,21 @@ TARGET_LINK_LIBRARIES(ovr TinyXml2)
 
 INCLUDE_DIRECTORIES(include src include/Kernel include/Util src/Kernel src/Util
     ${TinyXml2_SOURCE_DIR}/include)
+
+IF(WIN32)
+    # TODO
+ELSEIF(UNIX AND NOT APPLE)
+    FIND_PACKAGE(UDev REQUIRED)
+    FIND_PACKAGE(Threads REQUIRED)
+    FIND_PACKAGE(X11 REQUIRED)
+    FIND_PACKAGE(Xinerama REQUIRED)
+    
+    SET(OVR_LIBRARIES ovr
+        ${UDEV_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${X11_LIBRARIES}
+        ${XINERAMA_LIBRARIES}
+        PARENT_SCOPE)
+ELSE()
+    # TODO
+ENDIF()

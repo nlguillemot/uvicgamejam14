@@ -10,7 +10,6 @@ ADD_EXECUTABLE(game
     main.cpp)
 
 TARGET_LINK_LIBRARIES(game
-    ovr
     GLplus
     tinyobjloader
     GLmesh
@@ -18,6 +17,7 @@ TARGET_LINK_LIBRARIES(game
     SDL2-static
     SDL2main
     SDL2plus
+    ${OVR_LIBRARIES}
     glew-static
     soil2)
 

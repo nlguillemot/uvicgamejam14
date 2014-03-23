@@ -42,6 +42,21 @@ static const char* FragmentShaderSource =
 
 void run()
 {
+    OVR::System ovrSystem;
+
+    std::unique_ptr<OVR::DeviceManager, void(*)(OVR::DeviceManager*)>
+            ovrDeviceManager(OVR::DeviceManager::Create(),
+            [](OVR::DeviceManager* manager){ manager->Release(); });
+
+    if (!ovrDeviceManager)
+    {
+        throw std::runtime_error("OVR::DeviceManager::Create");
+    }
+
+    std::unique_ptr<OVR::HMDDevice, void(*)(OVR::HMDDevice*)>
+        ovrDevice(ovrDeviceManager->EnumerateDevices<OVR::HMDDevice>().CreateDevice(),
+        [](OVR::HMDDevice* device){ device->Release(); });
+
     SDL2plus::LibSDL sdl(SDL_INIT_VIDEO);
 
     sdl.SetGLAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

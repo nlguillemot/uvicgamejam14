@@ -9,15 +9,30 @@
 namespace GLplus
 {
 
+void CheckGLErrors();
+
+struct ObjectHandle
+{
+    GLuint mHandle;
+    ObjectHandle(){ mHandle = 0; }
+    ObjectHandle(const ObjectHandle& other) = delete;
+    ObjectHandle& operator=(const ObjectHandle& other) = delete;
+    ObjectHandle(ObjectHandle&& other){ std::swap(mHandle, other.mHandle); }
+    ObjectHandle& operator=(ObjectHandle&& other){ std::swap(mHandle, other.mHandle); }
+};
+
 class Shader
 {
-    GLuint mHandle = 0;
-    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
-
+    ObjectHandle mHandle;
     GLenum mShaderType;
 
 public:
     Shader(GLenum shaderType);
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+    Shader(Shader&&) = default;
+    Shader& operator=(Shader&&) = default;
+    ~Shader();
 
     void Compile(const GLchar* source);
 
@@ -28,9 +43,7 @@ public:
 
 class Program
 {
-    GLuint mHandle = 0;
-    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
-
+    ObjectHandle mHandle;
     std::shared_ptr<Shader> mFragmentShader;
     std::shared_ptr<Shader> mVertexShader;
 
@@ -38,6 +51,11 @@ public:
     static Program FromFiles(const char* vShaderFile, const char* fShaderFile);
 
     Program();
+    Program(const Program&) = delete;
+    Program& operator=(const Program&) = delete;
+    Program(Program&&) = default;
+    Program& operator=(Program&&) = default;
+    ~Program();
 
     void Attach(const std::shared_ptr<Shader>& shader);
     void Link();
@@ -62,7 +80,7 @@ public:
 
 class ScopedProgramBind
 {
-    GLint mOldProgram;
+    ObjectHandle mOldProgram;
 
 public:
     ScopedProgramBind(const Program& bound);
@@ -71,13 +89,16 @@ public:
 
 class Buffer
 {
-    GLuint mHandle = 0;
-    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
-
+    ObjectHandle mHandle;
     GLenum mTarget;
 
 public:
     Buffer(GLenum target);
+    Buffer(const Buffer&) = delete;
+    Buffer& operator=(const Buffer&) = delete;
+    Buffer(Buffer&&) = default;
+    Buffer& operator=(Buffer&&) = default;
+    ~Buffer();
 
     void Upload(GLsizeiptr size, const GLvoid* data, GLenum usage);
 
@@ -88,7 +109,7 @@ public:
 
 class ScopedBufferBind
 {
-    GLint mOldBuffer;
+    ObjectHandle mOldBuffer;
     GLenum mTarget;
 
 public:
@@ -98,15 +119,18 @@ public:
 
 class VertexArray
 {
-    GLuint mHandle = 0;
-    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
-
+    ObjectHandle mHandle;
     std::unordered_map<GLuint, std::shared_ptr<Buffer> > mVertexBuffers;
     std::shared_ptr<Buffer> mIndexBuffer;
     GLenum mIndexType = 0;
 
 public:
     VertexArray();
+    VertexArray(const VertexArray&) = delete;
+    VertexArray& operator=(const VertexArray&) = delete;
+    VertexArray(VertexArray&&) = default;
+    VertexArray& operator=(VertexArray&&) = default;
+    ~VertexArray();
 
     void SetAttribute(
             GLuint index,
@@ -128,7 +152,7 @@ public:
 
 class ScopedVertexArrayBind
 {
-    GLint mOldVertexArray;
+    ObjectHandle mOldVertexArray;
 
 public:
     ScopedVertexArrayBind(const VertexArray& bound);
@@ -137,9 +161,7 @@ public:
 
 class Texture2D
 {
-    GLuint mHandle = 0;
-    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
-
+    ObjectHandle mHandle;
     int mWidth;
     int mHeight;
 
@@ -151,6 +173,11 @@ public:
     };
 
     Texture2D();
+    Texture2D(const Texture2D&) = delete;
+    Texture2D& operator=(const Texture2D&) = delete;
+    Texture2D(Texture2D&&) = default;
+    Texture2D& operator=(Texture2D&&) = default;
+    ~Texture2D();
 
     void LoadImage(const char* filename, unsigned int flags);
     void CreateStorage(GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height);
@@ -163,7 +190,7 @@ public:
 
 class ScopedTextureBind
 {
-    GLint mOldTexture;
+    ObjectHandle mOldTexture;
     GLint mOldTextureIndex;
     GLenum mTextureIndex;
 
@@ -174,11 +201,15 @@ public:
 
 class RenderBuffer
 {
-    GLuint mHandle = 0;
-    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
+    ObjectHandle mHandle;
 
 public:
     RenderBuffer();
+    RenderBuffer(const RenderBuffer&) = delete;
+    RenderBuffer& operator=(const RenderBuffer&) = delete;
+    RenderBuffer(RenderBuffer&&) = default;
+    RenderBuffer& operator=(RenderBuffer&&) = default;
+    ~RenderBuffer();
 
     void CreateStorage(GLenum internalformat, GLsizei width, GLsizei height);
 
@@ -187,7 +218,7 @@ public:
 
 class ScopedRenderBufferBind
 {
-    GLint mOldRenderBuffer;
+    ObjectHandle mOldRenderBuffer;
 
 public:
     ScopedRenderBufferBind(const RenderBuffer& bound);
@@ -196,8 +227,7 @@ public:
 
 class FrameBuffer
 {
-    GLuint mHandle;
-    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
+    ObjectHandle mHandle;
 
     struct Attachment
     {
@@ -211,6 +241,11 @@ class FrameBuffer
 
 public:
     FrameBuffer();
+    FrameBuffer(const FrameBuffer&) = delete;
+    FrameBuffer& operator=(const FrameBuffer&) = delete;
+    FrameBuffer(FrameBuffer&&) = default;
+    FrameBuffer& operator=(FrameBuffer&&) = default;
+    ~FrameBuffer();
 
     void Attach(GLenum attachment, const std::shared_ptr<Texture2D>& texture);
     void Attach(GLenum attachment, const std::shared_ptr<RenderBuffer>& renderBuffer);
@@ -228,7 +263,7 @@ class DefaultFrameBuffer { };
 // TODO: Make it possible to choose between the DRAW/READ framebuffer
 class ScopedFrameBufferBind
 {
-    GLint mOldFrameBuffer;
+    ObjectHandle mOldFrameBuffer;
 
 public:
     ScopedFrameBufferBind(const FrameBuffer& bound);

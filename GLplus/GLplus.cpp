@@ -25,7 +25,7 @@ static const char* StringFromGLError(GLenum err)
     }
 }
 
-static void CheckGLErrors()
+void CheckGLErrors()
 {
     GLenum firstError = glGetError();
 
@@ -38,41 +38,38 @@ static void CheckGLErrors()
 }
 
 Shader::Shader(GLenum shaderType)
-    : mHandlePtr(&mHandle, [](GLuint* handle){
-        glDeleteShader(*handle);
-        CheckGLErrors();
-    })
-    , mShaderType(shaderType)
+    : mShaderType(shaderType)
 {
-    mHandle = glCreateShader(shaderType);
+    mHandle.mHandle = glCreateShader(shaderType);
     CheckGLErrors();
+}
 
-    if (!mHandle)
-    {
-        throw std::runtime_error("glCreateShader");
-    }
+Shader::~Shader()
+{
+    glDeleteShader(mHandle.mHandle);
+    CheckGLErrors();
 }
 
 void Shader::Compile(const GLchar* source)
 {
-    glShaderSource(mHandle, 1, &source, NULL);
+    glShaderSource(mHandle.mHandle, 1, &source, NULL);
     CheckGLErrors();
 
-    glCompileShader(mHandle);
+    glCompileShader(mHandle.mHandle);
     CheckGLErrors();
 
     int status;
-    glGetShaderiv(mHandle, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(mHandle.mHandle, GL_COMPILE_STATUS, &status);
     CheckGLErrors();
 
     if (!status)
     {
         int logLength;
-        glGetShaderiv(mHandle, GL_INFO_LOG_LENGTH, &logLength);
+        glGetShaderiv(mHandle.mHandle, GL_INFO_LOG_LENGTH, &logLength);
         CheckGLErrors();
 
         std::vector<char> log(logLength);
-        glGetShaderInfoLog(mHandle, log.size(), NULL, log.data());
+        glGetShaderInfoLog(mHandle.mHandle, log.size(), NULL, log.data());
         CheckGLErrors();
 
         throw std::runtime_error(log.data());
@@ -86,27 +83,24 @@ GLenum Shader::GetShaderType() const
 
 GLuint Shader::GetGLHandle() const
 {
-    return mHandle;
+    return mHandle.mHandle;
 }
 
 Program::Program()
-    : mHandlePtr(&mHandle, [](GLuint* handle){
-        glDeleteProgram(*handle);
-        CheckGLErrors();
-    })
 {
-    mHandle = glCreateProgram();
+    mHandle.mHandle = glCreateProgram();
     CheckGLErrors();
+}
 
-    if (!mHandle)
-    {
-        throw std::runtime_error("glCreateProgram");
-    }
+Program::~Program()
+{
+    glDeleteProgram(mHandle.mHandle);
+    CheckGLErrors();
 }
 
 void Program::Attach(const std::shared_ptr<Shader>& shader)
 {
-    glAttachShader(mHandle, shader->GetGLHandle());
+    glAttachShader(mHandle.mHandle, shader->GetGLHandle());
     CheckGLErrors();
 
     switch (shader->GetShaderType())
@@ -124,21 +118,21 @@ void Program::Attach(const std::shared_ptr<Shader>& shader)
 
 void Program::Link()
 {
-    glLinkProgram(mHandle);
+    glLinkProgram(mHandle.mHandle);
     CheckGLErrors();
 
     int status;
-    glGetProgramiv(mHandle, GL_LINK_STATUS, &status);
+    glGetProgramiv(mHandle.mHandle, GL_LINK_STATUS, &status);
     CheckGLErrors();
 
     if (!status)
     {
         int logLength;
-        glGetProgramiv(mHandle, GL_INFO_LOG_LENGTH, &logLength);
+        glGetProgramiv(mHandle.mHandle, GL_INFO_LOG_LENGTH, &logLength);
         CheckGLErrors();
 
         std::vector<char> log(logLength);
-        glGetProgramInfoLog(mHandle, log.size(), NULL, log.data());
+        glGetProgramInfoLog(mHandle.mHandle, log.size(), NULL, log.data());
         CheckGLErrors();
 
         throw std::runtime_error(log.data());
@@ -165,16 +159,16 @@ Program Program::FromFiles(const char* vShaderFile, const char* fShaderFile)
 
     // attach & link
     Program program;
-    program.Attach(std::move(vShader));
-    program.Attach(std::move(fShader));
+    program.Attach(vShader);
+    program.Attach(fShader);
     program.Link();
 
-    return std::move(program);
+    return program;
 }
 
 bool Program::TryGetAttributeLocation(const GLchar* name, GLint& loc) const
 {
-    GLint location = glGetAttribLocation(mHandle, name);
+    GLint location = glGetAttribLocation(mHandle.mHandle, name);
     CheckGLErrors();
     if (location == -1)
     {
@@ -197,7 +191,7 @@ GLint Program::GetAttributeLocation(const GLchar* name) const
 
 bool Program::TryGetUniformLocation(const GLchar* name, GLint& loc) const
 {
-    GLint location = glGetUniformLocation(mHandle, name);
+    GLint location = glGetUniformLocation(mHandle.mHandle, name);
     if (location == -1)
     {
         return false;
@@ -254,13 +248,16 @@ void Program::UploadMatrix4(GLint location, GLboolean transpose, const GLfloat* 
 
 GLuint Program::GetGLHandle() const
 {
-    return mHandle;
+    return mHandle.mHandle;
 }
 
 ScopedProgramBind::ScopedProgramBind(const Program& bound)
 {
-    glGetIntegerv(GL_CURRENT_PROGRAM, &mOldProgram);
+    GLint currentProgram;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
     CheckGLErrors();
+
+    mOldProgram.mHandle = currentProgram;
 
     glUseProgram(bound.GetGLHandle());
     CheckGLErrors();
@@ -268,24 +265,21 @@ ScopedProgramBind::ScopedProgramBind(const Program& bound)
 
 ScopedProgramBind::~ScopedProgramBind()
 {
-    glUseProgram(mOldProgram);
+    glUseProgram(mOldProgram.mHandle);
     CheckGLErrors();
 }
 
 Buffer::Buffer(GLenum target)
-    : mHandlePtr(&mHandle, [](GLuint* handle){
-        glDeleteBuffers(1, handle);
-        CheckGLErrors();
-    })
-    , mTarget(target)
+    : mTarget(target)
 {
-    glGenBuffers(1, &mHandle);
+    glGenBuffers(1, &mHandle.mHandle);
     CheckGLErrors();
+}
 
-    if (!mHandle)
-    {
-        throw std::runtime_error("glGenBuffers");
-    }
+Buffer::~Buffer()
+{
+    glDeleteBuffers(1, &mHandle.mHandle);
+    CheckGLErrors();
 }
 
 void Buffer::Upload(GLsizeiptr size, const GLvoid* data, GLenum usage)
@@ -303,7 +297,7 @@ GLenum Buffer::GetTarget() const
 
 GLuint Buffer::GetGLHandle() const
 {
-    return mHandle;
+    return mHandle.mHandle;
 }
 
 ScopedBufferBind::ScopedBufferBind(const Buffer& bound)
@@ -311,8 +305,11 @@ ScopedBufferBind::ScopedBufferBind(const Buffer& bound)
 {
     if (bound.GetTarget() == GL_ARRAY_BUFFER)
     {
-        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &mOldBuffer);
+        GLint oldBuffer;
+        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &oldBuffer);
         CheckGLErrors();
+
+        mOldBuffer.mHandle = oldBuffer;
     }
     glBindBuffer(bound.GetTarget(), bound.GetGLHandle());
     CheckGLErrors();
@@ -320,23 +317,20 @@ ScopedBufferBind::ScopedBufferBind(const Buffer& bound)
 
 ScopedBufferBind::~ScopedBufferBind()
 {
-    glBindBuffer(mTarget, mOldBuffer);
+    glBindBuffer(mTarget, mOldBuffer.mHandle);
     CheckGLErrors();
 }
 
 VertexArray::VertexArray()
-    : mHandlePtr(&mHandle, [](GLuint* handle){
-        glDeleteVertexArrays(1, handle);
-        CheckGLErrors();
-    })
 {
-    glGenVertexArrays(1, &mHandle);
+    glGenVertexArrays(1, &mHandle.mHandle);
     CheckGLErrors();
+}
 
-    if (!mHandle)
-    {
-        throw std::runtime_error("glGenVertexArrays");
-    }
+VertexArray::~VertexArray()
+{
+    glDeleteVertexArrays(1, &mHandle.mHandle);
+    CheckGLErrors();
 }
 
 void VertexArray::SetAttribute(
@@ -396,13 +390,16 @@ GLenum VertexArray::GetIndexType() const
 
 GLuint VertexArray::GetGLHandle() const
 {
-    return mHandle;
+    return mHandle.mHandle;
 }
 
 ScopedVertexArrayBind::ScopedVertexArrayBind(const VertexArray& bound)
 {
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &mOldVertexArray);
+    GLint oldArray;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &oldArray);
     CheckGLErrors();
+
+    mOldVertexArray.mHandle = oldArray;
 
     glBindVertexArray(bound.GetGLHandle());
     CheckGLErrors();
@@ -410,23 +407,20 @@ ScopedVertexArrayBind::ScopedVertexArrayBind(const VertexArray& bound)
 
 ScopedVertexArrayBind::~ScopedVertexArrayBind()
 {
-    glBindVertexArray(mOldVertexArray);
+    glBindVertexArray(mOldVertexArray.mHandle);
     CheckGLErrors();
 }
 
 Texture2D::Texture2D()
-    : mHandlePtr(&mHandle, [](GLuint* handle){
-        glDeleteTextures(1, handle);
-        CheckGLErrors();
-    })
 {
-    glGenTextures(1, &mHandle);
+    glGenTextures(1, &mHandle.mHandle);
     CheckGLErrors();
+}
 
-    if (!mHandle)
-    {
-        throw std::runtime_error("glGenTextures");
-    }
+Texture2D::~Texture2D()
+{
+    glDeleteTextures(1, &mHandle.mHandle);
+    CheckGLErrors();
 }
 
 void Texture2D::LoadImage(const char* filename, unsigned int flags)
@@ -441,7 +435,7 @@ void Texture2D::LoadImage(const char* filename, unsigned int flags)
     if (!SOIL_load_OGL_texture(filename,
                 &width, &height, NULL,
                 SOIL_LOAD_AUTO,
-                mHandle,
+                mHandle.mHandle,
                 soilFlags))
     {
         throw std::runtime_error(SOIL_last_result());
@@ -464,7 +458,7 @@ void Texture2D::CreateStorage(GLsizei levels, GLenum internalformat, GLsizei wid
 
 int Texture2D::GetWidth() const
 {
-    if (!mHandle)
+    if (!mHandle.mHandle)
     {
         throw std::runtime_error("Texture not loaded.");
     }
@@ -473,7 +467,7 @@ int Texture2D::GetWidth() const
 
 int Texture2D::GetHeight() const
 {
-    if (!mHandle)
+    if (!mHandle.mHandle)
     {
         throw std::runtime_error("Texture not loaded.");
     }
@@ -482,7 +476,7 @@ int Texture2D::GetHeight() const
 
 GLuint Texture2D::GetGLHandle() const
 {
-    return mHandle;
+    return mHandle.mHandle;
 }
 
 ScopedTextureBind::ScopedTextureBind(const Texture2D& bound, GLenum textureIndex)
@@ -494,8 +488,11 @@ ScopedTextureBind::ScopedTextureBind(const Texture2D& bound, GLenum textureIndex
     glActiveTexture(mTextureIndex);
     CheckGLErrors();
 
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &mOldTexture);
+    GLint oldTexture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &oldTexture);
     CheckGLErrors();
+
+    mOldTexture.mHandle = oldTexture;
 
     glBindTexture(GL_TEXTURE_2D, bound.GetGLHandle());
     CheckGLErrors();
@@ -503,7 +500,7 @@ ScopedTextureBind::ScopedTextureBind(const Texture2D& bound, GLenum textureIndex
 
 ScopedTextureBind::~ScopedTextureBind()
 {
-    glBindTexture(GL_TEXTURE_2D, mOldTexture);
+    glBindTexture(GL_TEXTURE_2D, mOldTexture.mHandle);
     CheckGLErrors();
 
     glActiveTexture(mOldTextureIndex);
@@ -511,18 +508,15 @@ ScopedTextureBind::~ScopedTextureBind()
 }
 
 RenderBuffer::RenderBuffer()
-    : mHandlePtr(&mHandle, [](GLuint* handle){
-        glDeleteRenderbuffers(1, handle);
-        CheckGLErrors();
-    })
 {
-    glGenRenderbuffers(1, &mHandle);
+    glGenRenderbuffers(1, &mHandle.mHandle);
     CheckGLErrors();
+}
 
-    if (!mHandle)
-    {
-        throw std::runtime_error("glGenRenderbuffers");
-    }
+RenderBuffer::~RenderBuffer()
+{
+    glDeleteRenderbuffers(1, &mHandle.mHandle);
+    CheckGLErrors();
 }
 
 void RenderBuffer::CreateStorage(GLenum internalformat, GLsizei width, GLsizei height)
@@ -535,13 +529,16 @@ void RenderBuffer::CreateStorage(GLenum internalformat, GLsizei width, GLsizei h
 
 GLuint RenderBuffer::GetGLHandle() const
 {
-    return mHandle;
+    return mHandle.mHandle;
 }
 
 ScopedRenderBufferBind::ScopedRenderBufferBind(const RenderBuffer& bound)
 {
-    glGetIntegerv(GL_RENDERBUFFER_BINDING, &mOldRenderBuffer);
+    GLint oldRenderbuffer;
+    glGetIntegerv(GL_RENDERBUFFER_BINDING, &oldRenderbuffer);
     CheckGLErrors();
+
+    mOldRenderBuffer.mHandle = oldRenderbuffer;
 
     glBindRenderbuffer(GL_RENDERBUFFER, bound.GetGLHandle());
     CheckGLErrors();
@@ -549,7 +546,7 @@ ScopedRenderBufferBind::ScopedRenderBufferBind(const RenderBuffer& bound)
 
 ScopedRenderBufferBind::~ScopedRenderBufferBind()
 {
-    glBindRenderbuffer(GL_RENDERBUFFER, mOldRenderBuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, mOldRenderBuffer.mHandle);
     CheckGLErrors();
 }
 
@@ -564,18 +561,15 @@ FrameBuffer::Attachment::Attachment(const std::shared_ptr<RenderBuffer>& renderB
 }
 
 FrameBuffer::FrameBuffer()
-    : mHandlePtr(&mHandle, [](GLuint* handle){
-        glDeleteFramebuffers(1, handle);
-        CheckGLErrors();
-    })
 {
-    glGenFramebuffers(1, &mHandle);
+    glGenFramebuffers(1, &mHandle.mHandle);
     CheckGLErrors();
+}
 
-    if (!mHandle)
-    {
-        throw std::runtime_error("glGenFramebuffers");
-    }
+FrameBuffer::~FrameBuffer()
+{
+    glDeleteFramebuffers(1, &mHandle.mHandle);
+    CheckGLErrors();
 }
 
 void FrameBuffer::Attach(GLenum attachment, const std::shared_ptr<Texture2D>& texture)
@@ -646,13 +640,16 @@ void FrameBuffer::ValidateStatus() const
 
 GLuint FrameBuffer::GetGLHandle() const
 {
-    return mHandle;
+    return mHandle.mHandle;
 }
 
 ScopedFrameBufferBind::ScopedFrameBufferBind(const FrameBuffer& bound)
 {
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &mOldFrameBuffer);
+    GLint oldFramebuffer;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebuffer);
     CheckGLErrors();
+
+    mOldFrameBuffer.mHandle = oldFramebuffer;
 
     glBindFramebuffer(GL_FRAMEBUFFER, bound.GetGLHandle());
     CheckGLErrors();
@@ -660,8 +657,11 @@ ScopedFrameBufferBind::ScopedFrameBufferBind(const FrameBuffer& bound)
 
 ScopedFrameBufferBind::ScopedFrameBufferBind(DefaultFrameBuffer)
 {
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &mOldFrameBuffer);
+    GLint oldFramebuffer;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFramebuffer);
     CheckGLErrors();
+
+    mOldFrameBuffer.mHandle = oldFramebuffer;
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     CheckGLErrors();
@@ -669,7 +669,8 @@ ScopedFrameBufferBind::ScopedFrameBufferBind(DefaultFrameBuffer)
 
 ScopedFrameBufferBind::~ScopedFrameBufferBind()
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, mOldFrameBuffer);
+    CheckGLErrors();
+    glBindFramebuffer(GL_FRAMEBUFFER, mOldFrameBuffer.mHandle);
     CheckGLErrors();
 }
 
@@ -691,6 +692,7 @@ void DrawElements(const Program& program, const VertexArray& model,
 
     glDrawElements(mode, count, model.GetIndexType(),
                    (const GLvoid*) (SizeFromGLType(model.GetIndexType()) * first));
+    CheckGLErrors();
 }
 
 } // end namespace GLplus

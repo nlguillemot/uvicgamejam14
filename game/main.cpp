@@ -150,15 +150,20 @@ void run()
             glClearColor(1.0f,1.0f,1.0f,1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
+            GLplus::CheckGLErrors();
 
             OVR::Util::Render::StereoConfig stereoConfig;
             stereoConfig.SetHMDInfo(hmdInfo);
+
+            GLplus::CheckGLErrors();
 
             const OVR::Util::Render::StereoEyeParams& leftEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Left);
             glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
             glm::mat4 leftEyeProjection = glm::make_mat4((const float*) leftEyeParams.Projection.Transposed().M);
             glm::mat4 leftViewAdjustment = glm::make_mat4((const float*) leftEyeParams.ViewAdjust.Transposed().M);
             scene.Render(leftEyeProjection, leftViewAdjustment);
+
+            GLplus::CheckGLErrors();
 
             const OVR::Util::Render::StereoEyeParams& rightEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Right);
             glViewport(window.GetWidth() / 2, 0, window.GetWidth() / 2, window.GetHeight());

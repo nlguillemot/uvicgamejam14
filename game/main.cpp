@@ -146,22 +146,17 @@ void run()
         OVR::Util::Render::StereoConfig stereoConfig;
         stereoConfig.SetHMDInfo(hmdInfo);
 
-        glm::mat4 lensSeparationAdjustment;
-        glm::mat4 viewAdjustmentForEye;
-
-        lensSeparationAdjustment[3][0] = stereoConfig.GetProjectionCenterOffset();
-        viewAdjustmentForEye[3][0] = stereoConfig.GetIPD();
-
+        const OVR::Util::Render::StereoEyeParams& leftEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Left);
         glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
-        glm::mat4 leftEyeProjection = glm::perspective(stereoConfig.GetYFOVDegrees(), stereoConfig.GetAspect(), 0.1f, 100.0f);
-        scene.Render(lensSeparationAdjustment * leftEyeProjection, viewAdjustmentForEye);
+        glm::mat4 leftEyeProjection = glm::make_mat4((const float*) leftEyeParams.Projection.Transposed().M);
+        glm::mat4 leftViewAdjustment = glm::make_mat4((const float*) leftEyeParams.ViewAdjust.Transposed().M);
+        scene.Render(leftEyeProjection, leftViewAdjustment);
 
-        lensSeparationAdjustment[3][0] *= -1;
-        viewAdjustmentForEye[3][0] *= -1;
-
+        const OVR::Util::Render::StereoEyeParams& rightEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Right);
         glViewport(window.GetWidth() / 2, 0, window.GetWidth() / 2, window.GetHeight());
-        glm::mat4 rightEyeProjection = glm::perspective(stereoConfig.GetYFOVDegrees(), stereoConfig.GetAspect(), 0.1f, 100.0f);
-        scene.Render(lensSeparationAdjustment * rightEyeProjection, viewAdjustmentForEye);
+        glm::mat4 rightEyeProjection = glm::make_mat4((const float*) rightEyeParams.Projection.Transposed().M);
+        glm::mat4 rightViewAdjustment = glm::make_mat4((const float*) rightEyeParams.ViewAdjust.Transposed().M);
+        scene.Render(rightEyeProjection, rightViewAdjustment);
 
         // flip the display
         window.GLSwapWindow();

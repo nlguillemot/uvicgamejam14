@@ -11,13 +11,8 @@ namespace GLplus
 
 class Shader
 {
-    struct ShaderDeleter
-    {
-        void operator()(GLuint* handle) const;
-    };
-
     GLuint mHandle = 0;
-    std::unique_ptr<GLuint, ShaderDeleter> mHandlePtr;
+    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
 
     GLenum mShaderType;
 
@@ -33,13 +28,8 @@ public:
 
 class Program
 {
-    struct ProgramDeleter
-    {
-        void operator()(GLuint* handle) const;
-    };
-
     GLuint mHandle = 0;
-    std::unique_ptr<GLuint, ProgramDeleter> mHandlePtr;
+    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
 
     std::shared_ptr<Shader> mFragmentShader;
     std::shared_ptr<Shader> mVertexShader;
@@ -79,13 +69,8 @@ public:
 
 class Buffer
 {
-    struct BufferDeleter
-    {
-        void operator()(GLuint* handle) const;
-    };
-
     GLuint mHandle = 0;
-    std::unique_ptr<GLuint, BufferDeleter> mHandlePtr;
+    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
 
     GLenum mTarget;
 
@@ -111,13 +96,8 @@ public:
 
 class VertexArray
 {
-    struct VertexArrayDeleter
-    {
-        void operator()(GLuint* handle) const;
-    };
-
     GLuint mHandle = 0;
-    std::unique_ptr<GLuint, VertexArrayDeleter> mHandlePtr;
+    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
 
     std::unordered_map<GLuint, std::shared_ptr<Buffer> > mVertexBuffers;
     std::shared_ptr<Buffer> mIndexBuffer;
@@ -155,13 +135,8 @@ public:
 
 class Texture
 {
-    struct TextureDeleter
-    {
-        void operator()(GLuint*) const;
-    };
-
     GLuint mHandle = 0;
-    std::unique_ptr<GLuint, TextureDeleter> mHandlePtr;
+    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
 
     int mWidth;
     int mHeight;
@@ -192,6 +167,29 @@ class ScopedTextureBind
 public:
     ScopedTextureBind(const Texture& bound, GLenum textureIndex);
     ~ScopedTextureBind();
+};
+
+class FrameBuffer
+{
+    GLuint mHandle;
+    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
+
+public:
+    FrameBuffer();
+
+    GLuint GetGLHandle() const;
+};
+
+class DefaultFrameBuffer { };
+
+class ScopedFrameBufferBind
+{
+    GLint mOldFrameBuffer;
+
+public:
+    ScopedFrameBufferBind(const FrameBuffer& bound);
+    ScopedFrameBufferBind(DefaultFrameBuffer);
+    ~ScopedFrameBufferBind();
 };
 
 constexpr size_t SizeFromGLType(GLenum type)

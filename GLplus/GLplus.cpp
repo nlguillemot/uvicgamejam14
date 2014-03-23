@@ -35,15 +35,11 @@ static void CheckGLErrors()
     }
 }
 
-
-void Shader::ShaderDeleter::operator ()(GLuint* handle) const
-{
-    glDeleteShader(*handle);
-    CheckGLErrors();
-}
-
 Shader::Shader(GLenum shaderType)
-    : mHandlePtr(&mHandle)
+    : mHandlePtr(&mHandle, [](GLuint* handle){
+        glDeleteShader(*handle);
+        CheckGLErrors();
+    })
     , mShaderType(shaderType)
 {
     mHandle = glCreateShader(shaderType);
@@ -91,14 +87,11 @@ GLuint Shader::GetGLHandle() const
     return mHandle;
 }
 
-void Program::ProgramDeleter::operator()(GLuint* handle) const
-{
-    glDeleteProgram(*handle);
-    CheckGLErrors();
-}
-
 Program::Program()
-    : mHandlePtr(&mHandle)
+    : mHandlePtr(&mHandle, [](GLuint* handle){
+        glDeleteProgram(*handle);
+        CheckGLErrors();
+    })
 {
     mHandle = glCreateProgram();
     CheckGLErrors();
@@ -250,14 +243,11 @@ ScopedProgramBind::~ScopedProgramBind()
     CheckGLErrors();
 }
 
-void Buffer::BufferDeleter::operator()(GLuint* handle) const
-{
-    glDeleteBuffers(1, handle);
-    CheckGLErrors();
-}
-
 Buffer::Buffer(GLenum target)
-    : mHandlePtr(&mHandle)
+    : mHandlePtr(&mHandle, [](GLuint* handle){
+        glDeleteBuffers(1, handle);
+        CheckGLErrors();
+    })
     , mTarget(target)
 {
     glGenBuffers(1, &mHandle);
@@ -305,14 +295,11 @@ ScopedBufferBind::~ScopedBufferBind()
     CheckGLErrors();
 }
 
-void VertexArray::VertexArrayDeleter::operator()(GLuint* handle) const
-{
-    glDeleteVertexArrays(1, handle);
-    CheckGLErrors();
-}
-
 VertexArray::VertexArray()
-    : mHandlePtr(&mHandle)
+    : mHandlePtr(&mHandle, [](GLuint* handle){
+        glDeleteVertexArrays(1, handle);
+        CheckGLErrors();
+    })
 {
     glGenVertexArrays(1, &mHandle);
     CheckGLErrors();
@@ -398,14 +385,11 @@ ScopedVertexArrayBind::~ScopedVertexArrayBind()
     CheckGLErrors();
 }
 
-void Texture::TextureDeleter::operator()(GLuint* handle) const
-{
-    glDeleteTextures(1, handle);
-    CheckGLErrors();
-}
-
 Texture::Texture()
-    : mHandlePtr(&mHandle)
+    : mHandlePtr(&mHandle, [](GLuint* handle){
+        glDeleteTextures(1, handle);
+        CheckGLErrors();
+    })
 {
     glGenTextures(1, &mHandle);
     CheckGLErrors();
@@ -483,6 +467,50 @@ ScopedTextureBind::~ScopedTextureBind()
     CheckGLErrors();
 
     glActiveTexture(mOldTextureIndex);
+    CheckGLErrors();
+}
+
+FrameBuffer::FrameBuffer()
+    : mHandlePtr(&mHandle, [](GLuint* handle){
+        glDeleteFramebuffers(1, handle);
+        CheckGLErrors();
+    })
+{
+    glGenFramebuffers(1, &mHandle);
+    CheckGLErrors();
+
+    if (!mHandle)
+    {
+        throw std::runtime_error("glGenFramebuffers");
+    }
+}
+
+GLuint FrameBuffer::GetGLHandle() const
+{
+    return mHandle;
+}
+
+ScopedFrameBufferBind::ScopedFrameBufferBind(const FrameBuffer& bound)
+{
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &mOldFrameBuffer);
+    CheckGLErrors();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, bound.GetGLHandle());
+    CheckGLErrors();
+}
+
+ScopedFrameBufferBind::ScopedFrameBufferBind(DefaultFrameBuffer)
+{
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &mOldFrameBuffer);
+    CheckGLErrors();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    CheckGLErrors();
+}
+
+ScopedFrameBufferBind::~ScopedFrameBufferBind()
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, mOldFrameBuffer);
     CheckGLErrors();
 }
 

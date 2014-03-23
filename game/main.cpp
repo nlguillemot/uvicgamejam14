@@ -38,11 +38,12 @@ static const char* FragmentShaderSource =
         "    color = texture(diffuseTexture, ftexcoord0);\n"
         "}";
 
-struct Scene
+class Scene
 {
     GLmesh::StaticMesh mCubeMesh;
     GLplus::Program mObjectShader;
 
+public:
     Scene()
     {
         // compile shaders
@@ -86,33 +87,55 @@ struct Scene
     }
 };
 
+class Oculus
+{
+    OVR::System mSystem;
+    std::unique_ptr<OVR::DeviceManager, void(*)(OVR::DeviceManager*)> mDeviceManager;
+    std::unique_ptr<OVR::HMDDevice, void(*)(OVR::HMDDevice*)> mHMDDevice;
+
+public:
+    Oculus()
+        : mDeviceManager(OVR::DeviceManager::Create(),
+                         [](OVR::DeviceManager* manager){ if (manager) manager->Release(); })
+        , mHMDDevice(mDeviceManager ? mDeviceManager->EnumerateDevices<OVR::HMDDevice>().CreateDevice() : nullptr,
+                     [](OVR::HMDDevice* device){ if (device) device->Release(); })
+    {
+    }
+
+    OVR::HMDInfo GetHMDInfo() const
+    {
+        OVR::HMDInfo info;
+        if (mHMDDevice)
+        {
+            mHMDDevice->GetDeviceInfo(&info);
+        }
+        else
+        {
+            info.HResolution = 1280;
+            info.VResolution = 800;
+            info.HScreenSize = 0.14976f;
+            info.VScreenSize = 0.09356f;
+            info.VScreenCenter = 0.0468f;
+            info.EyeToScreenDistance = 0.041f;
+            info.LensSeparationDistance = 0.0635f;
+            info.InterpupillaryDistance = 0.064f;
+            info.DistortionK[0] = 1.0f;
+            info.DistortionK[1] = 0.22f;
+            info.DistortionK[2] = 0.24f;
+            info.DistortionK[3] = 0.0f;
+            info.ChromaAbCorrection[0] = 0.996f;
+            info.ChromaAbCorrection[1] = -0.004f;
+            info.ChromaAbCorrection[2] = 1.014f;
+            info.ChromaAbCorrection[3] = 0.0f;
+        }
+        return info;
+    }
+};
+
 void run()
 {
-    OVR::System ovrSystem;
-
-    std::unique_ptr<OVR::DeviceManager, void(*)(OVR::DeviceManager*)>
-            ovrDeviceManager(OVR::DeviceManager::Create(),
-            [](OVR::DeviceManager* manager){ manager->Release(); });
-
-    if (!ovrDeviceManager)
-    {
-        throw std::runtime_error("OVR::DeviceManager::Create");
-    }
-
-    std::unique_ptr<OVR::HMDDevice, void(*)(OVR::HMDDevice*)>
-        ovrDevice(ovrDeviceManager->EnumerateDevices<OVR::HMDDevice>().CreateDevice(),
-        [](OVR::HMDDevice* device){ device->Release(); });
-
-    if (!ovrDevice)
-    {
-        throw std::runtime_error("Couldn't find device");
-    }
-
-    OVR::HMDInfo hmdInfo;
-    if (!ovrDevice->GetDeviceInfo(&hmdInfo))
-    {
-        throw std::runtime_error("Couldn't get device info");
-    }
+    Oculus oculus;
+    const OVR::HMDInfo hmdInfo = oculus.GetHMDInfo();
 
     SDL2plus::LibSDL sdl(SDL_INIT_VIDEO);
 

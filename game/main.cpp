@@ -100,6 +100,10 @@ public:
         , mHMDDevice(mDeviceManager ? mDeviceManager->EnumerateDevices<OVR::HMDDevice>().CreateDevice() : nullptr,
                      [](OVR::HMDDevice* device){ if (device) device->Release(); })
     {
+        if (!mDeviceManager || !mHMDDevice)
+        {
+            printf("Warning: Couldn't connect to real oculus. Using fake oculus.\n");
+        }
     }
 
     OVR::HMDInfo GetHMDInfo() const
@@ -144,9 +148,20 @@ void run()
     sdl.SetGLAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // create the window
-    SDL2plus::Window window(hmdInfo.HResolution, hmdInfo.VResolution, "Game", SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN);
+    SDL2plus::Window window(hmdInfo.HResolution, hmdInfo.VResolution, "Game", SDL_WINDOW_OPENGL); // | SDL_WINDOW_FULLSCREEN);
 
     Scene scene;
+
+    std::shared_ptr<GLplus::Texture2D> renderedTexture = std::make_shared<GLplus::Texture2D>();
+    renderedTexture->CreateStorage(1, GL_RGBA8, hmdInfo.HResolution, hmdInfo.VResolution);
+
+    std::shared_ptr<GLplus::RenderBuffer> depthBuffer = std::make_shared<GLplus::RenderBuffer>();
+    depthBuffer->CreateStorage(GL_DEPTH_COMPONENT16, hmdInfo.HResolution, hmdInfo.VResolution);
+
+    GLplus::FrameBuffer offscreenFrameBuffer;
+    offscreenFrameBuffer.Attach(GL_COLOR_ATTACHMENT0, renderedTexture);
+    offscreenFrameBuffer.Attach(GL_DEPTH_ATTACHMENT, depthBuffer);
+    offscreenFrameBuffer.ValidateStatus();
 
     // begin main loop
     int isGameRunning = 1;
@@ -162,24 +177,28 @@ void run()
             }
         }
 
-        glClearColor(1.0f,1.0f,1.0f,1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);;
+        {
+            GLplus::ScopedFrameBufferBind offscreenBind(offscreenFrameBuffer);
 
-        OVR::Util::Render::StereoConfig stereoConfig;
-        stereoConfig.SetHMDInfo(hmdInfo);
+            glClearColor(1.0f,1.0f,1.0f,1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);;
 
-        const OVR::Util::Render::StereoEyeParams& leftEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Left);
-        glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
-        glm::mat4 leftEyeProjection = glm::make_mat4((const float*) leftEyeParams.Projection.Transposed().M);
-        glm::mat4 leftViewAdjustment = glm::make_mat4((const float*) leftEyeParams.ViewAdjust.Transposed().M);
-        scene.Render(leftEyeProjection, leftViewAdjustment);
+            OVR::Util::Render::StereoConfig stereoConfig;
+            stereoConfig.SetHMDInfo(hmdInfo);
 
-        const OVR::Util::Render::StereoEyeParams& rightEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Right);
-        glViewport(window.GetWidth() / 2, 0, window.GetWidth() / 2, window.GetHeight());
-        glm::mat4 rightEyeProjection = glm::make_mat4((const float*) rightEyeParams.Projection.Transposed().M);
-        glm::mat4 rightViewAdjustment = glm::make_mat4((const float*) rightEyeParams.ViewAdjust.Transposed().M);
-        scene.Render(rightEyeProjection, rightViewAdjustment);
+            const OVR::Util::Render::StereoEyeParams& leftEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Left);
+            glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
+            glm::mat4 leftEyeProjection = glm::make_mat4((const float*) leftEyeParams.Projection.Transposed().M);
+            glm::mat4 leftViewAdjustment = glm::make_mat4((const float*) leftEyeParams.ViewAdjust.Transposed().M);
+            scene.Render(leftEyeProjection, leftViewAdjustment);
+
+            const OVR::Util::Render::StereoEyeParams& rightEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Right);
+            glViewport(window.GetWidth() / 2, 0, window.GetWidth() / 2, window.GetHeight());
+            glm::mat4 rightEyeProjection = glm::make_mat4((const float*) rightEyeParams.Projection.Transposed().M);
+            glm::mat4 rightViewAdjustment = glm::make_mat4((const float*) rightEyeParams.ViewAdjust.Transposed().M);
+            scene.Render(rightEyeProjection, rightViewAdjustment);
+        }
 
         // flip the display
         window.GLSwapWindow();

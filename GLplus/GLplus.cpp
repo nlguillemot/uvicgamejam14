@@ -428,6 +428,9 @@ void Texture2D::CreateStorage(GLsizei levels, GLenum internalformat, GLsizei wid
 
     glTexStorage2D(GL_TEXTURE_2D, levels, internalformat, width, height);
     CheckGLErrors();
+
+    mWidth = width;
+    mHeight = height;
 }
 
 int Texture2D::GetWidth() const

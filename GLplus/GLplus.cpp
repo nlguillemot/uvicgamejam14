@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 #include <vector>
+#include <fstream>
+#include <sstream>
 
 #include "SOIL2.h"
 
@@ -141,6 +143,33 @@ void Program::Link()
 
         throw std::runtime_error(log.data());
     }
+}
+
+Program Program::FromFiles(const char* vShaderFile, const char* fShaderFile)
+{
+    std::ifstream vFile(vShaderFile), fFile(fShaderFile);
+    if (!vFile || !fFile)
+    {
+        throw std::runtime_error("Couldn't open shader file");
+    }
+
+    std::stringstream vStream, fStream;
+    vStream << vFile.rdbuf();
+    fStream << fFile.rdbuf();
+
+    std::shared_ptr<GLplus::Shader> vShader = std::make_shared<GLplus::Shader>(GL_VERTEX_SHADER);
+    vShader->Compile(vStream.str().c_str());
+
+    std::shared_ptr<GLplus::Shader> fShader = std::make_shared<GLplus::Shader>(GL_FRAGMENT_SHADER);
+    fShader->Compile(fStream.str().c_str());
+
+    // attach & link
+    Program program;
+    program.Attach(std::move(vShader));
+    program.Attach(std::move(fShader));
+    program.Link();
+
+    return std::move(program);
 }
 
 bool Program::TryGetAttributeLocation(const GLchar* name, GLint& loc) const

@@ -22,29 +22,8 @@ class Scene
 
 public:
     Scene()
+        : mObjectShader(GLplus::Program::FromFiles("object.vs","object.fs"))
     {
-        std::ifstream vsFile("object.vs"), fsFile("object.fs");
-        if (!vsFile || !fsFile)
-        {
-            throw std::runtime_error("Couldn't open object.vs or object.fs");
-        }
-
-        std::stringstream vsStream, fsStream;
-        vsStream << vsFile.rdbuf();
-        fsStream << fsFile.rdbuf();
-
-        // compile shaders
-        std::shared_ptr<GLplus::Shader> vertexShader = std::make_shared<GLplus::Shader>(GL_VERTEX_SHADER);
-        vertexShader->Compile(vsStream.str().c_str());
-
-        std::shared_ptr<GLplus::Shader> fragmentShader = std::make_shared<GLplus::Shader>(GL_FRAGMENT_SHADER);
-        fragmentShader->Compile(fsStream.str().c_str());
-
-        // attach & link
-        mObjectShader.Attach(vertexShader);
-        mObjectShader.Attach(fragmentShader);
-        mObjectShader.Link();
-
         // load box into mesh
         std::vector<tinyobj::shape_t> shapes;
         tinyobj::LoadObj(shapes, "box.obj");
@@ -164,12 +143,13 @@ void run()
             }
         }
 
+
         {
             GLplus::ScopedFrameBufferBind offscreenBind(offscreenFrameBuffer);
 
             glClearColor(1.0f,1.0f,1.0f,1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-            glEnable(GL_DEPTH_TEST);;
+            glEnable(GL_DEPTH_TEST);
 
             OVR::Util::Render::StereoConfig stereoConfig;
             stereoConfig.SetHMDInfo(hmdInfo);

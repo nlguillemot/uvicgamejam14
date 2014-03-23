@@ -35,6 +35,8 @@ class Program
     std::shared_ptr<Shader> mVertexShader;
 
 public:
+    static Program FromFiles(const char* vShaderFile, const char* fShaderFile);
+
     Program();
 
     void Attach(const std::shared_ptr<Shader>& shader);

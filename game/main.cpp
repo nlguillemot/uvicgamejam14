@@ -5,38 +5,15 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <stdio.h>
 
+#include <sstream>
+#include <fstream>
+
 #include <SDL2plus.hpp>
 #include <GLplus.hpp>
 #include <GLmesh.hpp>
 #include <tiny_obj_loader.h>
 
 #include <OVR.h>
-
-// source code for the vertex shader and fragment shader
-static const char* VertexShaderSource =
-        "#version 130\n"
-        "in vec4 position;\n"
-        "in vec3 normal;\n"
-        "in vec2 texcoord0;\n"
-        "out vec3 fnormal;\n"
-        "out vec2 ftexcoord0;\n"
-        "uniform mat4 modelview;\n"
-        "uniform mat4 projection;\n"
-        "void main() {\n"
-        "    fnormal = normal;\n"
-        "    ftexcoord0 = texcoord0;\n"
-        "    gl_Position = projection * modelview * position;\n"
-        "}";
-
-static const char* FragmentShaderSource =
-        "#version 130\n"
-        "out vec4 color;\n"
-        "in vec3 fnormal;\n"
-        "in vec2 ftexcoord0;\n"
-        "uniform sampler2D diffuseTexture;\n"
-        "void main() {\n"
-        "    color = texture(diffuseTexture, ftexcoord0);\n"
-        "}";
 
 class Scene
 {
@@ -46,12 +23,22 @@ class Scene
 public:
     Scene()
     {
+        std::ifstream vsFile("object.vs"), fsFile("object.fs");
+        if (!vsFile || !fsFile)
+        {
+            throw std::runtime_error("Couldn't open object.vs or object.fs");
+        }
+
+        std::stringstream vsStream, fsStream;
+        vsStream << vsFile.rdbuf();
+        fsStream << fsFile.rdbuf();
+
         // compile shaders
         std::shared_ptr<GLplus::Shader> vertexShader = std::make_shared<GLplus::Shader>(GL_VERTEX_SHADER);
-        vertexShader->Compile(VertexShaderSource);
+        vertexShader->Compile(vsStream.str().c_str());
 
         std::shared_ptr<GLplus::Shader> fragmentShader = std::make_shared<GLplus::Shader>(GL_FRAGMENT_SHADER);
-        fragmentShader->Compile(FragmentShaderSource);
+        fragmentShader->Compile(fsStream.str().c_str());
 
         // attach & link
         mObjectShader.Attach(vertexShader);

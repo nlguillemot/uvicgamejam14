@@ -16,7 +16,7 @@ void StaticMesh::LoadShape(const tinyobj::shape_t& shape)
     std::shared_ptr<GLplus::Buffer> newPositions;
     std::shared_ptr<GLplus::Buffer> newNormals;
     std::shared_ptr<GLplus::Buffer> newTexcoords;
-    std::shared_ptr<GLplus::Texture> newDiffuseTexture;
+    std::shared_ptr<GLplus::Texture2D> newDiffuseTexture;
 
     newIndices.reset(new GLplus::Buffer(GL_ELEMENT_ARRAY_BUFFER));
     newIndices->Upload(
@@ -49,8 +49,8 @@ void StaticMesh::LoadShape(const tinyobj::shape_t& shape)
 
     if (!shape.material.diffuse_texname.empty())
     {
-        newDiffuseTexture.reset(new GLplus::Texture());
-        newDiffuseTexture->LoadImage(shape.material.diffuse_texname.c_str());
+        newDiffuseTexture.reset(new GLplus::Texture2D());
+        newDiffuseTexture->LoadImage(shape.material.diffuse_texname.c_str(), GLplus::Texture2D::InvertY);
     }
 
     mVertexCount = shape.mesh.indices.size();

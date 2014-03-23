@@ -133,7 +133,7 @@ public:
     ~ScopedVertexArrayBind();
 };
 
-class Texture
+class Texture2D
 {
     GLuint mHandle = 0;
     std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
@@ -148,9 +148,10 @@ public:
         InvertY
     };
 
-    Texture();
-    
-    void LoadImage(const char* filename, unsigned int flags = InvertY);
+    Texture2D();
+
+    void LoadImage(const char* filename, unsigned int flags);
+    void CreateStorage(GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height);
 
     int GetWidth() const;
     int GetHeight() const;
@@ -165,8 +166,30 @@ class ScopedTextureBind
     GLenum mTextureIndex;
 
 public:
-    ScopedTextureBind(const Texture& bound, GLenum textureIndex);
+    ScopedTextureBind(const Texture2D& bound, GLenum textureIndex);
     ~ScopedTextureBind();
+};
+
+class RenderBuffer
+{
+    GLuint mHandle = 0;
+    std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
+
+public:
+    RenderBuffer();
+
+    void CreateStorage(GLenum internalformat, GLsizei width, GLsizei height);
+
+    GLuint GetGLHandle() const;
+};
+
+class ScopedRenderBufferBind
+{
+    GLint mOldRenderBuffer;
+
+public:
+    ScopedRenderBufferBind(const RenderBuffer& bound);
+    ~ScopedRenderBufferBind();
 };
 
 class FrameBuffer
@@ -174,14 +197,33 @@ class FrameBuffer
     GLuint mHandle;
     std::unique_ptr<GLuint, void(*)(GLuint*)> mHandlePtr;
 
+    struct Attachment
+    {
+        Attachment(const std::shared_ptr<Texture2D>&);
+        Attachment(const std::shared_ptr<RenderBuffer>&);
+        std::shared_ptr<Texture2D> mTextureAttachment;
+        std::shared_ptr<RenderBuffer> mRenderBufferAttachment;
+    };
+
+    std::unordered_map<GLenum, Attachment> mAttachments;
+
 public:
     FrameBuffer();
+
+    void Attach(GLenum attachment, const std::shared_ptr<Texture2D>& texture);
+    void Attach(GLenum attachment, const std::shared_ptr<RenderBuffer>& renderBuffer);
+
+    void Detach(GLenum attachment);
+
+    GLenum GetStatus() const;
+    void ValidateStatus() const;
 
     GLuint GetGLHandle() const;
 };
 
 class DefaultFrameBuffer { };
 
+// TODO: Make it possible to choose between the DRAW/READ framebuffer
 class ScopedFrameBufferBind
 {
     GLint mOldFrameBuffer;

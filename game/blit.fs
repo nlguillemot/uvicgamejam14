@@ -4,9 +4,9 @@ in vec2 ftexcoord;
 
 out vec4 color;
 
-uniform sampler2D img;
+uniform sampler2D RenderedStereoscopicScene;
 
 void main()
 {
-    color = texture(img, ftexcoord);
+    color = texture(RenderedStereoscopicScene, ftexcoord);
 }

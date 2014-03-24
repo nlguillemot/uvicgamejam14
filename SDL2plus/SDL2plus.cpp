@@ -68,6 +68,11 @@ Window::Window(int width, int height, const char *title, Uint32 flags)
     }
 }
 
+void Window::SetPosition(int x, int y)
+{
+    SDL_SetWindowPosition(GetSDLHandle(), x, y);
+}
+
 int Window::GetWidth() const
 {
     int w;

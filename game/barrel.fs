@@ -4,22 +4,39 @@ in vec2 ftexcoord;
 
 out vec4 color;
 
-uniform sampler2D img;
+// frame of video to render with a barrel distortion in two draw calls
+uniform sampler2D RenderedStereoscopicScene;
+
+// position of lens center in texture coordinates
 uniform vec2 LensCenter;
+
+// center of the screen in texture coordinates
 uniform vec2 ScreenCenter;
-uniform vec2 Scale;
-uniform vec2 ScaleIn;
+
+// ratio to scale half-screen texture coordinates
+// to coordinates in a unit space around the lens
+uniform vec2 TextureToLensScale;
+// and vice versa
+uniform vec2 LensToTextureScale;
+
+// the four distortion parameters
 uniform vec4 HmdWarpParam;
 
-vec2 HmdWarp(vec2 in01)
+// converts the texture coordinate to a barrel distorted one
+vec2 HmdWarp(vec2 rawTexcoord)
 {
-    vec2 r = (in01 - LensCenter) * ScaleIn; // scales to [-1,1]
-    float rSq = r.x * r.x + r.y * r.y;
-    vec2 f_r = vec2(HmdWarpParam.x +
-                    HmdWarpParam.y * rSq +
-                    HmdWarpParam.z * rSq * rSq +
-                    HmdWarpParam.w * rSq * rSq * rSq);
-    return LensCenter + Scale * f_r * r;
+    // convert texture coordinates from [0,1] to [-1,1]
+    vec2 inLensSpace = (rawTexcoord - LensCenter) * TextureToLensScale; // scales to [-1,1]
+
+	// calculate distortion
+    float rSq = inLensSpace.x * inLensSpace.x + inLensSpace.y * inLensSpace.y;
+    float distortionScale = HmdWarpParam.x +
+                            HmdWarpParam.y * rSq +
+                            HmdWarpParam.z * rSq * rSq +
+                            HmdWarpParam.w * rSq * rSq * rSq;
+
+	// translate back to texture coordinate space
+    return LensCenter + inLensSpace * distortionScale * LensToTextureScale;
 }
 
 void main()
@@ -32,7 +49,7 @@ void main()
     }
     else
     {
-        color = texture(img, tc);
+        color = texture(RenderedStereoscopicScene, tc);
     }
 }
 

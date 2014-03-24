@@ -210,15 +210,27 @@ GLint Program::GetUniformLocation(const GLchar* name) const
     return loc;
 }
 
-void Program::UploadUint(const GLchar* name, GLuint value) const
+void Program::UploadInt(const GLchar* name, GLuint value) const
 {
-    UploadUint(GetUniformLocation(name), value);
+    UploadInt(GetUniformLocation(name), value);
 }
 
-void Program::UploadUint(GLint location, GLuint value) const
+void Program::UploadInt(GLint location, GLuint value) const
 {
     ScopedProgramBind binder(*this);
     glUniform1i(location, value);
+    CheckGLErrors();
+}
+
+void Program::UploadFloat(const GLchar* name, GLfloat value) const
+{
+    UploadFloat(GetUniformLocation(name), value);
+}
+
+void Program::UploadFloat(GLint location, GLfloat value) const
+{
+    ScopedProgramBind binder(*this);
+    glUniform1f(location, value);
     CheckGLErrors();
 }
 

@@ -105,7 +105,7 @@ void StaticMesh::Render(const GLplus::Program& program) const
     if (mDiffuseTexture)
     {
         diffuseBind.reset(new GLplus::ScopedTextureBind(*mDiffuseTexture, GL_TEXTURE0));
-        program.UploadUint("diffuseTexture", 0);
+        program.UploadInt("diffuseTexture", 0);
     }
 
     GLplus::ScopedProgramBind programBind(program);

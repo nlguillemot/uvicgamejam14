@@ -66,8 +66,11 @@ public:
     bool TryGetUniformLocation(const GLchar* name, GLint& loc) const;
     GLint GetUniformLocation(const GLchar* name) const;
 
-    void UploadUint(const GLchar* name, GLuint value) const;
-    void UploadUint(GLint location, GLuint value) const;
+    void UploadInt(const GLchar* name, GLuint value) const;
+    void UploadInt(GLint location, GLuint value) const;
+
+    void UploadFloat(const GLchar* name, GLfloat value) const;
+    void UploadFloat(GLint location, GLfloat value) const;
 
     void UploadVec2(const GLchar* name, GLfloat v0, GLfloat v1) const;
     void UploadVec2(GLint location, GLfloat v0, GLfloat v1) const;

@@ -20,6 +20,7 @@ public:
 
 class Window
 {
+    // TODO: fix this totally broken raii crap
     struct WindowDeleter
     {
         void operator()(SDL_Window*) const;
@@ -36,6 +37,8 @@ class Window
 
 public:
     Window(int width, int height, const char* title, Uint32 flags = 0);
+
+    void SetPosition(int x, int y);
 
     int GetWidth() const;
     int GetHeight() const;

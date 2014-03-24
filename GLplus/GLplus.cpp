@@ -222,6 +222,42 @@ void Program::UploadUint(GLint location, GLuint value) const
     CheckGLErrors();
 }
 
+void Program::UploadVec2(const GLchar* name, GLfloat v0, GLfloat v1) const
+{
+    UploadVec2(GetUniformLocation(name), v0, v1);
+}
+
+void Program::UploadVec2(GLint location, GLfloat v0, GLfloat v1) const
+{
+    ScopedProgramBind binder(*this);
+    glUniform2f(location, v0, v1);
+    CheckGLErrors();
+}
+
+void Program::UploadVec2(const GLchar* name, const GLfloat* values) const
+{
+    UploadVec2(GetUniformLocation(name), values);
+}
+
+void Program::UploadVec2(GLint location, const GLfloat* values) const
+{
+    ScopedProgramBind binder(*this);
+    glUniform2fv(location, 1, values);
+    CheckGLErrors();
+}
+
+void Program::UploadVec4(const GLchar* name, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) const
+{
+    UploadVec4(GetUniformLocation(name), v0, v1, v2, v3);
+}
+
+void Program::UploadVec4(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) const
+{
+    ScopedProgramBind binder(*this);
+    glUniform4f(location, v0, v1, v2, v3);
+    CheckGLErrors();
+}
+
 void Program::UploadVec4(const GLchar* name, const GLfloat* values) const
 {
     UploadVec4(GetUniformLocation(name), values);
@@ -669,29 +705,20 @@ ScopedFrameBufferBind::ScopedFrameBufferBind(DefaultFrameBuffer)
 
 ScopedFrameBufferBind::~ScopedFrameBufferBind()
 {
-    CheckGLErrors();
     glBindFramebuffer(GL_FRAMEBUFFER, mOldFrameBuffer.mHandle);
     CheckGLErrors();
 }
 
-void DrawArrays(const Program &program, const VertexArray &model,
-                GLenum mode, GLint first, GLsizei count)
+void DrawArrays(GLenum mode, GLint first, GLsizei count)
 {
-    ScopedProgramBind programBind(program);
-    ScopedVertexArrayBind modelBind(model);
-
     glDrawArrays(mode, first, count);
     CheckGLErrors();
 }
 
-void DrawElements(const Program& program, const VertexArray& model,
-                  GLenum mode, GLint first, GLsizei count)
+void DrawElements(GLenum mode, GLenum indexType, GLint first, GLsizei count)
 {
-    ScopedProgramBind programBind(program);
-    ScopedVertexArrayBind modelBind(model);
-
-    glDrawElements(mode, count, model.GetIndexType(),
-                   (const GLvoid*) (SizeFromGLType(model.GetIndexType()) * first));
+    glDrawElements(mode, count, indexType,
+                   (const GLvoid*) (SizeFromGLType(indexType) * first));
     CheckGLErrors();
 }
 

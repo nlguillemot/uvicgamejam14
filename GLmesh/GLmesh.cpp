@@ -108,8 +108,9 @@ void StaticMesh::Render(const GLplus::Program& program) const
         program.UploadUint("diffuseTexture", 0);
     }
 
-    DrawElements(program, vertexArray,
-                 GL_TRIANGLES, 0, mVertexCount);
+    GLplus::ScopedProgramBind programBind(program);
+    GLplus::ScopedVertexArrayBind vertexArrayBind(vertexArray);
+    GLplus::DrawElements(GL_TRIANGLES, GL_UNSIGNED_INT, 0, mVertexCount);
 }
 
 } // end namespace GLmesh

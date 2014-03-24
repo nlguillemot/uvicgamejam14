@@ -69,6 +69,13 @@ public:
     void UploadUint(const GLchar* name, GLuint value) const;
     void UploadUint(GLint location, GLuint value) const;
 
+    void UploadVec2(const GLchar* name, GLfloat v0, GLfloat v1) const;
+    void UploadVec2(GLint location, GLfloat v0, GLfloat v1) const;
+    void UploadVec2(const GLchar* name, const GLfloat* const values) const;
+    void UploadVec2(GLint location, const GLfloat* values) const;
+
+    void UploadVec4(const GLchar* name, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) const;
+    void UploadVec4(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3) const;
     void UploadVec4(const GLchar* name, const GLfloat* const values) const;
     void UploadVec4(GLint location, const GLfloat* values) const;
 
@@ -282,11 +289,9 @@ constexpr size_t SizeFromGLType(GLenum type)
            throw "Unimplemented Type";
 }
 
-void DrawArrays(const Program& program, const VertexArray& model,
-                GLenum mode, GLint first, GLsizei count);
+void DrawArrays(GLenum mode, GLint first, GLsizei count);
 
-void DrawElements(const Program& program, const VertexArray& model,
-                GLenum mode, GLint first, GLsizei count);
+void DrawElements(GLenum mode, GLenum indexType, GLint first, GLsizei count);
 
 } // end namespace GLplus
 

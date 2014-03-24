@@ -37,10 +37,14 @@ public:
     void Render(glm::mat4 projection, glm::mat4 viewAdjustmentForEye) const
     {
         glm::vec3 center(0.0f);
-        glm::vec3 eyePoint = glm::vec3(0.0f, 5.0f, 5.0f);
         glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f);
 
         float rotation = SDL_GetTicks() / 1000.0f * 90.0f;
+        float rotation2 = SDL_GetTicks() / 1000.0f * 3.14 / 2;
+        float rotation3 = SDL_GetTicks() / 1000.0f * 3.14 / 3;
+
+        glm::vec3 eyePoint = glm::vec3(0.0f, 5.0f * sin(rotation2), 5.0f * fabs(sin(rotation3) + 1.5f));
+
         glm::mat4 modelview;
         modelview = glm::rotate(modelview, rotation, glm::vec3(0,1,0));
         modelview = glm::lookAt(eyePoint, center, up) * modelview;
@@ -114,7 +118,7 @@ void run()
     sdl.SetGLAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // create the window
-    SDL2plus::Window window(hmdInfo.HResolution, hmdInfo.VResolution, "Game", SDL_WINDOW_OPENGL); // | SDL_WINDOW_FULLSCREEN);
+    SDL2plus::Window window(hmdInfo.HResolution, hmdInfo.VResolution, "Game", SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP);
 
     Scene scene;
 
@@ -128,6 +132,65 @@ void run()
     offscreenFrameBuffer.Attach(GL_COLOR_ATTACHMENT0, renderedTexture);
     offscreenFrameBuffer.Attach(GL_DEPTH_ATTACHMENT, depthBuffer);
     offscreenFrameBuffer.ValidateStatus();
+
+    GLplus::Program distortionProgram(GLplus::Program::FromFiles("distortion.vs","distortion.fs"));
+    GLplus::Program blitProgram(GLplus::Program::FromFiles("blit.vs","blit.fs"));
+
+    std::shared_ptr<GLplus::Buffer> fullscreenPositions, fullscreenTexcoords;
+    {
+        static const float distortionPositionsData[] = {
+            // bottom triangle of left eye
+            -1.0f,  1.0f,
+            -1.0f, -1.0f,
+             0.0f, -1.0f,
+            // top triangle of left eye
+             0.0f, -1.0f,
+             0.0f,  1.0f,
+            -1.0f,  1.0f,
+            // bottom triangle of right eye
+             0.0f,  1.0f,
+             0.0f, -1.0f,
+             1.0f, -1.0f,
+            // top triangle of right eye
+             1.0f, -1.0f,
+             1.0f,  1.0f,
+             0.0f,  1.0f
+        };
+
+        static const float distortionTexcoordsData[] = {
+            // bottom triangle of left eye
+            0.0f, 1.0f,
+            0.0f, 0.0f,
+            0.5f, 0.0f,
+            // top triangle of left eye
+            0.5f, 0.0f,
+            0.5f, 1.0f,
+            0.0f, 1.0f,
+            // bottom triangle of right eye
+            0.5f, 1.0f,
+            0.5f, 0.0f,
+            1.0f, 0.0f,
+            // top triangle of right eye
+            1.0f, 0.0f,
+            1.0f, 1.0f,
+            0.5f, 1.0f
+        };
+
+        fullscreenPositions = std::make_shared<GLplus::Buffer>(GL_ARRAY_BUFFER);
+        fullscreenPositions->Upload(sizeof(distortionPositionsData), distortionPositionsData, GL_STATIC_DRAW);
+
+        fullscreenTexcoords = std::make_shared<GLplus::Buffer>(GL_ARRAY_BUFFER);
+        fullscreenTexcoords->Upload(sizeof(distortionTexcoordsData), distortionTexcoordsData, GL_STATIC_DRAW);
+    }
+
+    OVR::Util::Render::StereoConfig stereoConfig;
+    stereoConfig.SetFullViewport(OVR::Util::Render::Viewport(0, 0, window.GetWidth(), window.GetHeight()));
+    stereoConfig.SetStereoMode(OVR::Util::Render::Stereo_LeftRight_Multipass);
+    stereoConfig.SetHMDInfo(hmdInfo);
+    stereoConfig.SetDistortionFitPointVP(-1.0f, 0.0f);
+
+    const OVR::Util::Render::StereoEyeParams& leftEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Left);
+    const OVR::Util::Render::StereoEyeParams& rightEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Right);
 
     // begin main loop
     int isGameRunning = 1;
@@ -143,7 +206,6 @@ void run()
             }
         }
 
-
         {
             GLplus::ScopedFrameBufferBind offscreenBind(offscreenFrameBuffer);
 
@@ -152,24 +214,72 @@ void run()
             glEnable(GL_DEPTH_TEST);
             GLplus::CheckGLErrors();
 
-            OVR::Util::Render::StereoConfig stereoConfig;
-            stereoConfig.SetHMDInfo(hmdInfo);
-
-            GLplus::CheckGLErrors();
-
-            const OVR::Util::Render::StereoEyeParams& leftEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Left);
             glViewport(0, 0, window.GetWidth() / 2, window.GetHeight());
             glm::mat4 leftEyeProjection = glm::make_mat4((const float*) leftEyeParams.Projection.Transposed().M);
             glm::mat4 leftViewAdjustment = glm::make_mat4((const float*) leftEyeParams.ViewAdjust.Transposed().M);
             scene.Render(leftEyeProjection, leftViewAdjustment);
 
-            GLplus::CheckGLErrors();
-
-            const OVR::Util::Render::StereoEyeParams& rightEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Right);
             glViewport(window.GetWidth() / 2, 0, window.GetWidth() / 2, window.GetHeight());
             glm::mat4 rightEyeProjection = glm::make_mat4((const float*) rightEyeParams.Projection.Transposed().M);
             glm::mat4 rightViewAdjustment = glm::make_mat4((const float*) rightEyeParams.ViewAdjust.Transposed().M);
             scene.Render(rightEyeProjection, rightViewAdjustment);
+        }
+
+        {
+            bool useDistortion = true;
+
+            glViewport(0, 0, window.GetWidth(), window.GetHeight());
+            glClearColor(1.0f,1.0f,1.0f,1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glDisable(GL_DEPTH_TEST);
+            GLplus::CheckGLErrors();
+
+            const float distortionScale = stereoConfig.GetDistortionScale();
+            const float lensCenter = 0.5f - hmdInfo.LensSeparationDistance / 2 / hmdInfo.HScreenSize;
+
+            GLplus::Program* fullscreenProgram(nullptr);
+
+            if (useDistortion)
+            {
+                distortionProgram.UploadUint("img", 0);
+                distortionProgram.UploadVec2("Scale", 0.5f - lensCenter, 0.5f);
+                distortionProgram.UploadVec2("ScaleIn", 1.0f / (0.5f - lensCenter), 2.0f);
+                distortionProgram.UploadVec4("HmdWarpParam", hmdInfo.DistortionK);
+                distortionProgram.UploadVec2("PositionScale", 1.0f, 1.0f);
+
+                fullscreenProgram = &distortionProgram;
+            }
+            else
+            {
+                blitProgram.UploadUint("img", 0);
+                fullscreenProgram = &blitProgram;
+            }
+
+            GLplus::VertexArray fullscreenMesh;
+            fullscreenMesh.SetAttribute(fullscreenProgram->GetAttributeLocation("texcoord"),
+                                        fullscreenTexcoords, 2, GL_FLOAT, GL_FALSE, 0, 0);
+            fullscreenMesh.SetAttribute(fullscreenProgram->GetAttributeLocation("position"),
+                                        fullscreenPositions, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+            GLplus::ScopedTextureBind textureBind(*renderedTexture, GL_TEXTURE0);
+            GLplus::ScopedVertexArrayBind vertexArrayBind(fullscreenMesh);
+            GLplus::ScopedProgramBind programBind(*fullscreenProgram);
+
+            // draw left eye
+            if (useDistortion)
+            {
+                distortionProgram.UploadVec2("LensCenter", lensCenter, 0.5f);
+                distortionProgram.UploadVec2("ScreenCenter", 0.25f, 0.5f);
+            }
+            GLplus::DrawArrays(GL_TRIANGLES, 0, 6);
+
+            // draw right eye
+            if (useDistortion)
+            {
+                distortionProgram.UploadVec2("LensCenter", 1.0f - lensCenter, 0.5f);
+                distortionProgram.UploadVec2("ScreenCenter", 0.75f, 0.5f);
+            }
+            GLplus::DrawArrays(GL_TRIANGLES, 6, 6);
         }
 
         // flip the display

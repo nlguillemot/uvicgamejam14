@@ -206,10 +206,6 @@ public:
     }
 };
 
-OverlayDebugLines GetDebugLineVertices(const OVR::HMDInfo& info)
-{
-}
-
 void run()
 {
     Oculus oculus;

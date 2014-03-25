@@ -338,7 +338,7 @@ void run()
 
     GLplus::Program barrelProgram(GLplus::Program::FromFiles("barrel.vs","barrel.fs"));
     GLplus::Program blitProgram(GLplus::Program::FromFiles("blit.vs","blit.fs"));
-    GLplus::Program debugLineProgram(GLplus::Program::FromFiles("debugline.vs","debugline.fs"));
+    GLplus::Program debugLineProgram(GLplus::Program::FromFiles("overlaydebug.vs","overlaydebug.fs"));
 
     Scene scene;
     OverlayDebugLines debugLines(hmdInfo);

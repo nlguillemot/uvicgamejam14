@@ -2,9 +2,9 @@
 
 in vec4 fcolor;
 
-out vec4 output;
+out vec4 outColor;
 
 void main()
 {
-    output = fcolor;
+    outColor = fcolor;
 }

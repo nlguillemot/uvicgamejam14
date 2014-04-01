@@ -2,6 +2,10 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 PROJECT(OVR CXX)
 
+IF (UNIX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf-3")
+ENDIF ()
+
 SET(COMMON_SOURCES
     src/Kernel/OVR_Alg.cpp
     src/Kernel/OVR_Allocator.cpp

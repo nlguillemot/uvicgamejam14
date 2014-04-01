@@ -78,7 +78,7 @@ public:
 
     OVR::HMDInfo GetHMDInfo() const
     {
-        OVR::HMDInfo info;
+        OVR::HMDInfo info{};
         if (mHMDDevice)
         {
             mHMDDevice->GetDeviceInfo(&info);
@@ -112,8 +112,12 @@ class OverlayDebugLines
     size_t mNumVertices;
 
 public:
-    OverlayDebugLines(const OVR::HMDInfo& info)
+    OverlayDebugLines(const OVR::Util::Render::StereoConfig& configRef)
     {
+        OVR::Util::Render::StereoConfig config = configRef;
+
+        const OVR::HMDInfo& info = config.GetHMDInfo();
+
         float vcenter = 1.0f - info.VScreenCenter / info.VScreenSize * 2.0f;
 
         std::vector<float> vertData;
@@ -129,12 +133,12 @@ public:
 
         float aspect = info.HScreenSize / info.VScreenSize;
         float lensFromCenter = info.LensSeparationDistance / info.HScreenSize;
-        float lensRadius = 0.2f;
         float eyeFromCenter = info.InterpupillaryDistance / info.HScreenSize;
         float eyeRadius = 0.13f;
 
         float lensCenters[2] = { -lensFromCenter, lensFromCenter };
         float eyeCenters[2]  = { -eyeFromCenter,  eyeFromCenter  };
+        float viewCenters[2] = { -0.5f, 0.5f };
 
         vertData.insert(vertData.end(), {
             // left lens vertical line
@@ -146,9 +150,9 @@ public:
         });
 
         int numCircleVerts = 30;
-        for (int radiusModifiers = 0; radiusModifiers < 4; radiusModifiers++)
+        for (int radiusModifiers = 0; radiusModifiers < 19; radiusModifiers++)
         {
-            float radius = lensRadius + radiusModifiers * 0.07;
+            float radius = 0.07f + radiusModifiers * 0.02;
             for (int eye = 0; eye < 2; eye++)
             {
                 for (int i = 0; i < numCircleVerts; i++)
@@ -156,8 +160,8 @@ public:
                     float startAngle = i * 2 * glm::pi<float>() / numCircleVerts;
                     float endAngle = (i+1) * 2 * glm::pi<float>() / numCircleVerts;
 
-                    float x1 = lensCenters[eye] + radius * cos(startAngle);
-                    float x2 = lensCenters[eye] + radius * cos(endAngle);
+                    float x1 = eyeCenters[eye] + radius * cos(startAngle);
+                    float x2 = eyeCenters[eye] + radius * cos(endAngle);
                     float y1 = vcenter + radius * sin(startAngle) * aspect;
                     float y2 = vcenter + radius * sin(endAngle) * aspect;
 
@@ -166,27 +170,38 @@ public:
                         x2, y2,     1.0f, 0.0f, 0.0f, 1.0f
                     });
 
-//                    x1 = eyeCenters[eye] + eyeRadius * cos(startAngle) * 1.3f;
-//                    x2 = eyeCenters[eye] + eyeRadius * cos(endAngle)   * 1.3f;
-//                    y1 = vcenter + eyeRadius * sin(startAngle) * aspect * 0.8f;
-//                    y2 = vcenter + eyeRadius * sin(endAngle) * aspect   * 0.8f;
+                    x1 = eyeCenters[eye] + eyeRadius * cos(startAngle) * 1.3f;
+                    x2 = eyeCenters[eye] + eyeRadius * cos(endAngle)   * 1.3f;
+                    y1 = vcenter + eyeRadius * sin(startAngle) * aspect * 0.8f;
+                    y2 = vcenter + eyeRadius * sin(endAngle) * aspect   * 0.8f;
 
-//                    vertData.insert(vertData.end(), {
-//                        x1, y1,     0.0f, 1.0f, 0.0f, 1.0f,
-//                        x2, y2,     0.0f, 1.0f, 0.0f, 1.0f
-//                    });
+                    vertData.insert(vertData.end(), {
+                        x1, y1,     0.0f, 1.0f, 0.0f, 1.0f,
+                        x2, y2,     0.0f, 1.0f, 0.0f, 1.0f
+                    });
 
                 }
             }
         }
 
+        const OVR::Util::Render::DistortionConfig& dConfig = config.GetDistortionConfig();
+        float absXOffset = -0.5f + dConfig.XCenterOffset / 2.0f;
+        vertData.insert(vertData.end(), {
+            absXOffset,  1.0f,    0.0f, 0.0f, 1.0f, 1.0f,
+            absXOffset, -1.0f,    0.0f, 0.0f, 1.0f, 1.0f,
+            -1.0f, dConfig.YCenterOffset,    0.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, dConfig.YCenterOffset,    0.0f, 0.0f, 1.0f, 1.0f,
+        });
+
         mVertexBuffer = std::make_shared<GLplus::Buffer>(GL_ARRAY_BUFFER);
         mVertexBuffer->Upload(vertData.size() * sizeof(vertData[0]), vertData.data(), GL_STATIC_DRAW);
-        mNumVertices = vertData.size();
+        mNumVertices = vertData.size() / 6;
     }
 
     void Render(const GLplus::Program& program)
     {
+        glLineWidth(2.0f);
+
         GLplus::VertexArray vertexArray;
 
         GLint positionLoc;
@@ -315,12 +330,17 @@ void run()
     SDL2plus::Window window(hmdInfo.HResolution, hmdInfo.VResolution, "Game", SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS);
     window.SetPosition(hmdInfo.DesktopX, hmdInfo.DesktopY);
 
+    printf("Created window with size (%d,%d)\n", window.GetWidth(), window.GetHeight());
+    fflush(stdout);
+
     OVR::Util::Render::StereoConfig stereoConfig;
     stereoConfig.SetFullViewport(OVR::Util::Render::Viewport(0, 0, window.GetWidth(), window.GetHeight()));
     stereoConfig.SetStereoMode(OVR::Util::Render::Stereo_LeftRight_Multipass);
     stereoConfig.SetHMDInfo(hmdInfo);
     stereoConfig.SetDistortionFitPointVP(-1.0f, 0.0f);
     const float distortionScale = stereoConfig.GetDistortionScale();
+    printf("Distortion scale: %f\n", distortionScale);
+    fflush(stdout);
 
     const OVR::Util::Render::StereoEyeParams& leftEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Left);
     const OVR::Util::Render::StereoEyeParams& rightEyeParams = stereoConfig.GetEyeRenderParams(OVR::Util::Render::StereoEye_Right);
@@ -336,13 +356,18 @@ void run()
     offscreenFrameBuffer.Attach(GL_DEPTH_ATTACHMENT, depthBuffer);
     offscreenFrameBuffer.ValidateStatus();
 
+    printf("Created offscreen buffer with size (%d,%d)\n", renderedTexture->GetWidth(), renderedTexture->GetHeight());
+    fflush(stdout);
+
     GLplus::Program barrelProgram(GLplus::Program::FromFiles("barrel.vs","barrel.fs"));
     GLplus::Program blitProgram(GLplus::Program::FromFiles("blit.vs","blit.fs"));
     GLplus::Program debugLineProgram(GLplus::Program::FromFiles("overlaydebug.vs","overlaydebug.fs"));
 
     Scene scene;
-    OverlayDebugLines debugLines(hmdInfo);
+    OverlayDebugLines debugLines(stereoConfig);
     FourFullscreenTriangles fourTriangles;
+
+    bool useDistortion = true;
 
     Uint32 timeOfLastFrame = SDL_GetTicks();
 
@@ -360,6 +385,11 @@ void run()
             // if the window is being requested to close, then stop the game.
             if (e.type == SDL_QUIT) {
                 isGameRunning = 0;
+            } else if (e.type == SDL_KEYDOWN) {
+                if (e.key.keysym.sym == SDLK_SPACE)
+                {
+                    useDistortion = !useDistortion;
+                }
             }
         }
 
@@ -388,8 +418,6 @@ void run()
         }
 
         {
-            bool useDistortion = true;
-
             glViewport(0, 0, window.GetWidth(), window.GetHeight());
             glClearColor(1.0f,1.0f,1.0f,1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -427,7 +455,7 @@ void run()
                 barrelProgram.UploadVec2("LensCenter", screenLeftToLeftLensCenter, hmdInfo.VScreenCenter / hmdInfo.VScreenSize);
                 barrelProgram.UploadVec2("ScreenCenter", 0.25f, 0.5f);
             }
-            fourTriangles.RenderLeft(barrelProgram);
+            fourTriangles.RenderLeft(*fullscreenProgram);
 
             // draw right eye
             if (useDistortion)
@@ -435,7 +463,7 @@ void run()
                 barrelProgram.UploadVec2("LensCenter", 1.0f - screenLeftToLeftLensCenter, hmdInfo.VScreenCenter / hmdInfo.VScreenSize);
                 barrelProgram.UploadVec2("ScreenCenter", 0.75f, 0.5f);
             }
-            fourTriangles.RenderRight(barrelProgram);
+            fourTriangles.RenderRight(*fullscreenProgram);
         }
 
         // flip the display
